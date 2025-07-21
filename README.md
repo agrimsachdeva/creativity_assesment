@@ -1,40 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/create-next-app).
+# Creativity Assessment Web Application
 
-## Getting Started
+A Next.js web application for conducting creativity research experiments with ChatGPT integration. Participants can complete divergent and convergent thinking tasks while all interactions and telemetry data are captured for research analysis.
 
-First, run the development server:
+## ✨ Features
 
+- **🎨 Divergent Thinking Tasks** - Open-ended creative exploration with AI assistance
+- **🎯 Remote Associates Test (RAT)** - Structured convergent thinking challenges with research-based word sets
+- **💬 ChatGPT Integration** - Real-time AI conversation for enhanced creative processes
+- **📊 Comprehensive Data Logging** - Complete telemetry capture including user interactions, browser data, and task performance
+- **🔗 Qualtrics Integration** - URL parameter support for seamless research workflow integration
+- **📱 Responsive Design** - Beautiful glassmorphism UI with animated backgrounds
+- **⚡ Vercel Deployment Ready** - Optimized for easy cloud deployment
+
+## 🚀 Quick Start
+
+### 1. Clone and Install
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd creativity_assesment
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Environment Setup
+Copy `.env.local` and configure:
+```bash
+# Required for AI functionality
+OPENAI_API_KEY=sk-your-openai-api-key-here
 
-You can start editing the page by modifying `app/route.ts`. The page auto-updates as you edit the file.
+# Required for data logging in production (optional for development)
+POSTGRES_URL=your-vercel-postgres-connection-string
+```
 
-## Learn More
+### 3. Development Server
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🔧 Configuration
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### OpenAI API Setup
+1. Get an API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Add to `.env.local`: `OPENAI_API_KEY=sk-your-key-here`
+3. Restart the development server
 
-## Deploy on Vercel
+### Database Setup (Production)
+1. Create a [Vercel Postgres](https://vercel.com/storage/postgres) database
+2. Copy connection string to `.env.local`
+3. Run the SQL migration from `interactions.sql`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+**Note:** The app works without database configuration in development - data will be logged to console.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 📊 Data Collection
 
-## API Routes
+The application captures comprehensive telemetry data:
 
-This directory contains example API routes for the headless API app.
+- **User Interactions**: All messages, timestamps, and response times
+- **Task Performance**: RAT round progression, word sets, completion status
+- **Browser Telemetry**: Screen resolution, viewport, timezone, user agent
+- **Session Data**: Qualtrics ID, task type, IP address
+- **System Events**: API calls, errors, navigation patterns
 
-For more details, see [route.js file convention](https://nextjs.org/docs/app/api-reference/file-conventions/route).
+## 🎯 Remote Associates Test (RAT)
+
+Features 15 research-based word sets from Bowden and Jung-Beeman (2003):
+- 2-round structure with random word selection
+- Progress tracking and completion detection
+- AI-assisted thinking and discussion
+- Comprehensive performance logging
+
+Example word set: `["cottage", "swiss", "cake"]` → Answer: `"cheese"`
