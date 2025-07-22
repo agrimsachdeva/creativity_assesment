@@ -132,22 +132,23 @@ export function ChatInterface({
         <div className="flex space-x-2 items-end">
           <div className="flex-1 relative">
             <textarea
-              className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent resize-none transition-all duration-300"
+              className="w-full h-9 px-3 py-1 bg-white text-gray-900 border border-white/20 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent resize-none transition-all duration-300 align-middle text-sm"
               value={input}
               onChange={(e) => handleInputChange(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={`Share your ${taskType === "divergent" ? "wildest ideas" : "focused thoughts"}... (Press Enter to send)`}
+              placeholder={`Ask AI.. (Press Enter to send)`}
               disabled={loading}
-              rows={2}
+              rows={1}
+              style={{minHeight: '2.25rem', maxHeight: '2.25rem'}}
             />
           </div>
           <button
-            className="px-5 py-2 bg-gradient-to-r from-cyan-500 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center space-x-1"
+            className="px-4 h-9 py-1 bg-gradient-to-r from-cyan-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center space-x-1 align-middle text-sm"
             onClick={handleSendMessage}
             disabled={loading || !input.trim()}
           >
             <span>Send</span>
-            <span className="text-lg">🚀</span>
+            <span className="text-base">🚀</span>
           </button>
         </div>
       </div>

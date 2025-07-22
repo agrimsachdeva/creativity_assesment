@@ -6,18 +6,23 @@ import { Header } from "../../components/shared/Header";
 import { ChatInterface } from "../../components/shared/ChatInterface";
 import { SessionInfo } from "../../components/shared/SessionInfo";
 import { TaskDescription } from "../../components/shared/TaskDescription";
-import { TelemetryDebugger } from "../../components/shared/TelemetryDebugger";
+import { AUTDisplay } from "../../components/divergent/AUTDisplay";
 import { sendChatMessage } from "../../components/shared/api";
 import { useTelemetry } from "../../components/shared/useTelemetry";
 import { Message } from "../../components/shared/types";
+import { AUT_ITEMS, AUTItem, getRandomAUTItem } from "../../components/divergent/autData";
 
 function DivergentTaskApp() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [qualtricsId, setQualtricsId] = useState<string | null>(null);
-  const [showTelemetryDebug, setShowTelemetryDebug] = useState(false);
-  const [currentTelemetry, setCurrentTelemetry] = useState<any>(null);
+  const [currentRound, setCurrentRound] = useState(1);
+  const [currentItem, setCurrentItem] = useState<AUTItem | null>(null);
+  const [totalRounds, setTotalRounds] = useState(3); // Easily configurable total number of rounds
+  const [ideas, setIdeas] = useState<string[]>([]);
+  const [newIdea, setNewIdea] = useState("");
+  const [completed, setCompleted] = useState(false);
   const searchParams = useSearchParams();
 
   // Initialize advanced telemetry
@@ -36,7 +41,30 @@ function DivergentTaskApp() {
     // Extract parameters from URL
     const id = searchParams.get("qualtricsId") || searchParams.get("id");
     if (id) setQualtricsId(id);
+    
+    // Initialize the first AUT round
+    initializeAUTRound();
+
+    // Show initial AI help message in chat
+    setMessages([
+      {
+        role: "assistant",
+        content: "🎨 Welcome to the Alternate Uses Test! I'm here to help spark your creativity. Share your wildest ideas for unusual uses of everyday objects. Need inspiration or want to brainstorm together? Just type below!",
+        timestamp: Date.now(),
+      },
+    ]);
   }, [searchParams]);
+
+  const initializeAUTRound = () => {
+    // Use helper function for random selection
+    const selectedItem = getRandomAUTItem();
+    setCurrentItem(selectedItem);
+    setIdeas([]); // Reset ideas for new round
+  };
+
+  const handleAddIdea = (idea: string) => {
+    setIdeas(prev => [...prev, idea]);
+  };
 
   const handleStartComposition = () => {
     startMessageComposition();
@@ -50,89 +78,44 @@ function DivergentTaskApp() {
     completeMessage();
   };
 
-  // Fixing error handling block and ensuring proper scoping of variables
   const handleSendMessage = async () => {
     if (!input.trim()) return;
 
     setLoading(true);
     const userMessage: Message = { role: "user", content: input, timestamp: Date.now() };
     setMessages((prev) => [...prev, userMessage]);
+
+    // Generate comprehensive telemetry
+    const telemetry = generateTelemetry(
+      currentRound,
+      null, // AUT doesn't use word sets like RAT
+      ideas.length > 0 ? 100 : 0, // Progress based on whether ideas have been added
+      completed,
+      input
+    );
+
+    const currentInput = input;
     setInput("");
 
-    // Ensure telemetry is always valid
-    const telemetry = generateTelemetry(
-      null, // no rounds for divergent thinking
-      null, // no word sets for divergent thinking
-      0, // task progress placeholder
-      false, // task completion placeholder
-      input
-    ) || {
-      sessionId: sessionId,
-      userId: userId,
-      timestamp: Date.now(),
-      language: navigator.language,
-      platform: navigator.platform,
-      userAgent: navigator.userAgent,
-      screenResolution: `${screen.width}x${screen.height}`,
-      viewport: `${window.innerWidth}x${window.innerHeight}`,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      devicePixelRatio: window.devicePixelRatio,
-      connectionType: (navigator as any).connection?.effectiveType || 'unknown',
-      taskType: "divergent",
-      taskProgress: 0,
-      typingPattern: {
-        totalKeypresses: 0,
-        backspaceCount: 0,
-        pauseCount: 0,
-        avgTypingSpeed: 0,
-        peakTypingSpeed: 0,
-        keystrokeDynamics: { dwellTimes: [], flightTimes: [], rhythm: 0 },
-        correctionRatio: 0,
-        pauseDistribution: []
-      },
-      mouseActivity: [],
-      keystrokeSequence: [],
-      cognitiveLoad: {
-        thinkingPauses: 0,
-        avgThinkingTime: 0,
-        longestPause: 0,
-        editingBehavior: { revisions: 0, deletions: 0, insertions: 0, cursorMovements: 0 },
-        responseLatency: 0,
-        taskSwitching: 0
-      },
-      linguisticFeatures: {
-        wordCount: 0,
-        charCount: 0,
-        avgWordLength: 0,
-        sentenceCount: 0,
-        avgSentenceLength: 0,
-        vocabularyRichness: 0,
-        readabilityScore: 0,
-        semanticComplexity: 0,
-        emotionalTone: { positive: 0, negative: 0, neutral: 1 },
-        creativityIndicators: { uniqueWords: 0, metaphorCount: 0, questionCount: 0, ideaCount: 0 }
-      },
-      messageMetrics: {
-        responseTime: 0,
-        messageLength: 0,
-        editCount: 0,
-        finalMessageDifferentFromFirst: false
-      },
-      interactionSequence: [],
-      sessionDuration: 0,
-      totalMessages: 0,
-      avgMessageInterval: 0,
-      taskCompletion: false,
-      featureVector: [],
-      temporalFeatures: []
-    };
-
     try {
-      const aiMessage = await sendChatMessage([...messages, userMessage], "divergent", telemetry, qualtricsId);
+      const startTime = Date.now();
+      recordResponseLatency();
+
+      const aiMessage = await sendChatMessage(
+        [...messages, userMessage], 
+        "divergent", 
+        telemetry!, 
+        qualtricsId
+      );
+
+      const responseTime = Date.now() - startTime;
+      recordAiResponse(responseTime);
+
       setMessages((prev) => [...prev, aiMessage]);
     } catch (error) {
       console.error("Error sending message:", error);
 
+      // Provide specific error messages based on the error
       let errorContent = "Sorry, I encountered an error. Please try again.";
 
       if (error instanceof Error) {
@@ -162,34 +145,82 @@ function DivergentTaskApp() {
     setLoading(false);
   };
 
+  const handleNextRound = () => {
+    if (currentRound < totalRounds) {
+      setCurrentRound((prev) => prev + 1);
+      initializeAUTRound();
+    } else {
+      setCompleted(true);
+    }
+  };
+
   return (
     <Background>
-      <Header 
-        title="Divergent Thinking Lab"
-        subtitle="Explore unlimited creative possibilities through open-ended ideation"
-        taskType="divergent"
-      />
-      
-      <ChatInterface
-        messages={messages}
-        input={input}
-        loading={loading}
-        taskType="divergent"
-        onInputChange={setInput}
-        onSendMessage={handleSendMessage}
-        onStartComposition={handleStartComposition}
-        onUpdateContent={handleUpdateContent}
-        onCompleteMessage={handleCompleteMessage}
-        emptyStateTitle="Ready to Unleash Your Creativity?"
-        emptyStateDescription="Let your imagination soar! Generate multiple unique ideas, explore unconventional solutions, and think beyond boundaries."
-      />
-      
-      <SessionInfo 
-        qualtricsId={qualtricsId} 
-        sessionId={sessionId}
-        userId={userId}
-      />
-      <TaskDescription taskType="divergent" />
+      <div className="flex flex-col md:flex-row gap-8 items-stretch justify-center w-full px-2 md:px-8 py-6 md:py-10 min-h-[80vh]">
+        {/* AUT Test Section */}
+        <div className="flex-1 max-w-2xl bg-white/10 rounded-2xl p-4 md:p-6 border border-white/20 shadow-md flex flex-col justify-start min-h-[60vh]">
+          <TaskDescription taskType="divergent" />
+          <div className="mb-8" />
+          {!completed && currentItem && (
+            <AUTDisplay
+              currentItem={currentItem}
+              currentRound={currentRound}
+              totalRounds={totalRounds}
+              ideas={ideas}
+              onAddIdea={handleAddIdea}
+              newIdea={newIdea}
+              onNewIdeaChange={setNewIdea}
+            />
+          )}
+          <div className="mt-4">
+            {!completed ? (
+              <>
+                {ideas.length >= 3 && (
+                  <button
+                    onClick={handleNextRound}
+                    className="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-md hover:from-purple-600 hover:to-pink-600 text-base font-semibold transition mt-2 shadow"
+                  >
+                    {currentRound < totalRounds ? `Continue to Round ${currentRound + 1}` : "Complete Test"}
+                  </button>
+                )}
+                {ideas.length < 3 && (
+                  <p className="text-white/60 text-sm text-center mt-2">
+                    💡 Add at least 3 creative ideas to continue to the next round
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="mt-4 text-green-400 text-lg text-center">🎉 Congratulations! You've completed all rounds of the Alternate Uses Test. Thank you for your creativity!</div>
+            )}
+          </div>
+          <div className="mt-8">
+            <SessionInfo 
+              qualtricsId={qualtricsId}
+              sessionId={sessionId}
+              userId={userId}
+            />
+          </div>
+        </div>
+
+        {/* ChatGPT Section */}
+        <div className="flex-1 max-w-2xl flex flex-col bg-white/10 rounded-2xl border border-white/20 shadow-md min-h-[60vh] max-h-[80vh] p-4 md:p-6 overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-auto custom-scrollbar">
+            <ChatInterface
+              messages={messages}
+              input={input}
+              loading={loading}
+              taskType="divergent"
+              onInputChange={setInput}
+              onSendMessage={handleSendMessage}
+              onStartComposition={handleStartComposition}
+              onUpdateContent={handleUpdateContent}
+              onCompleteMessage={handleCompleteMessage}
+              emptyStateTitle="Ready to Unleash Your Creativity?"
+              emptyStateDescription="Let your imagination soar! Generate multiple unique ideas, explore unconventional solutions, and think beyond boundaries."
+            />
+          </div>
+        </div>
+      </div>
     </Background>
   );
 }
