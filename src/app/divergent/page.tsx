@@ -97,6 +97,7 @@ function DivergentTaskApp() {
     setLoading(true);
     const userMessage: Message = { role: "user", content: input, timestamp: Date.now() };
     setMessages((prev) => [...prev, userMessage]);
+    setInput(""); // Clear input immediately after sending
 
     // Generate telemetry
     const telemetry = generateTelemetry(

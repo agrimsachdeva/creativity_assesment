@@ -31,6 +31,7 @@ export function ChatInterface({
 }: ChatInterfaceProps) {
   const isComposingRef = useRef(false);
   const lastInputLengthRef = useRef(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const defaultDescription = taskType === "divergent" 
     ? "Let your imagination run wild! Generate multiple ideas, think outside the box, and explore endless possibilities."
@@ -75,6 +76,11 @@ export function ChatInterface({
     }
   }, [input]);
 
+  // Auto-scroll to latest message
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
   return (
     <div className="backdrop-blur-lg bg-white/10 rounded-xl border border-white/20 shadow-lg flex flex-col" style={{height: '600px'}}>
       {/* Chat Messages Area */}
@@ -109,6 +115,7 @@ export function ChatInterface({
                 </div>
               </div>
             ))}
+            <div ref={messagesEndRef} />
           </div>
         )}
         {loading && (
