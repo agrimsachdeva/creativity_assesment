@@ -26,7 +26,7 @@ function RouterApp() {
     // If no taskType is specified, stay on this page to show task selection
   }, [searchParams, router]);
 
-  const handleTaskSelection = (taskType: "divergent" | "convergent") => {
+  const handleTaskSelection = (taskType: "divergent" | "convergent" | "dat") => {
     const id = searchParams.get("qualtricsId") || searchParams.get("id");
     const params = new URLSearchParams();
     if (id) params.set("qualtricsId", id);
@@ -52,41 +52,60 @@ function RouterApp() {
       </div>
 
       {/* Task Selection */}
-      <div className="grid md:grid-cols-2 gap-8 mb-12">
+      <div className="grid md:grid-cols-3 gap-6 mb-12">
         {/* Divergent Thinking Card */}
         <div 
-          className="backdrop-blur-sm bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-300 cursor-pointer transform hover:scale-105"
+          className="backdrop-blur-sm bg-white/10 rounded-3xl p-6 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-300 cursor-pointer transform hover:scale-105"
           onClick={() => handleTaskSelection("divergent")}
         >
           <div className="text-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-3xl">🌟</span>
+            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">🌟</span>
             </div>
-            <h2 className="text-3xl font-bold text-white mb-4">Divergent Thinking</h2>
-            <p className="text-white/80 text-lg leading-relaxed mb-6">
-              🎨 Unleash your creativity! Generate multiple unique ideas, explore unconventional solutions, and think beyond boundaries. Perfect for brainstorming and creative exploration.
+            <h2 className="text-2xl font-bold text-white mb-3">Alternate Uses Task</h2>
+            <p className="text-white/80 text-sm leading-relaxed mb-4">
+              🎨 Unleash your creativity! Generate multiple unique ideas and explore unconventional solutions.
             </p>
-            <div className="inline-block px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl font-semibold hover:shadow-lg transition-all duration-200">
-              Start Divergent Task →
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 text-sm">
+              Start AUT Task →
             </div>
           </div>
         </div>
 
         {/* Convergent Thinking (RAT) Card */}
         <div 
-          className="backdrop-blur-sm bg-white/10 rounded-3xl p-8 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-300 cursor-pointer transform hover:scale-105"
+          className="backdrop-blur-sm bg-white/10 rounded-3xl p-6 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-300 cursor-pointer transform hover:scale-105"
           onClick={() => handleTaskSelection("convergent")}
         >
           <div className="text-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-3xl">🎯</span>
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">🎯</span>
             </div>
-            <h2 className="text-3xl font-bold text-white mb-4">Remote Associates Test</h2>
-            <p className="text-white/80 text-lg leading-relaxed mb-6">
-              🎯 Test your convergent thinking! Find the connecting word that relates to three given words. Features 2 rounds with research-based word sets from creativity literature.
+            <h2 className="text-2xl font-bold text-white mb-3">Remote Associates Test</h2>
+            <p className="text-white/80 text-sm leading-relaxed mb-4">
+              🎯 Test your convergent thinking! Find the connecting word that relates to three given words.
             </p>
-            <div className="inline-block px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-2xl font-semibold hover:shadow-lg transition-all duration-200">
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 text-sm">
               Start RAT Test →
+            </div>
+          </div>
+        </div>
+
+        {/* Divergent Association Task (DAT) Card */}
+        <div 
+          className="backdrop-blur-sm bg-white/10 rounded-3xl p-6 border border-white/20 shadow-2xl hover:shadow-3xl transition-all duration-300 cursor-pointer transform hover:scale-105"
+          onClick={() => handleTaskSelection("dat")}
+        >
+          <div className="text-center">
+            <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">🧠</span>
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">Divergent Association Task</h2>
+            <p className="text-white/80 text-sm leading-relaxed mb-4">
+              🧠 Generate 10 words that are as different from each other as possible. Measures semantic creativity.
+            </p>
+            <div className="inline-block px-4 py-2 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all duration-200 text-sm">
+              Start DAT Task →
             </div>
           </div>
         </div>
@@ -99,7 +118,7 @@ function RouterApp() {
           <div>
             <div className="text-4xl mb-3">📝</div>
             <h4 className="text-lg font-semibold text-white mb-2">Choose Task</h4>
-            <p className="text-white/70 text-sm">Select either divergent thinking for open-ended creativity or RAT for focused problem-solving</p>
+            <p className="text-white/70 text-sm">Select from three creativity assessments: AUT (idea generation), RAT (insight problems), or DAT (semantic distance)</p>
           </div>
           <div>
             <div className="text-4xl mb-3">💬</div>
