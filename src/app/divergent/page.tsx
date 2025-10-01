@@ -7,7 +7,7 @@ import { ChatInterface } from "../../components/shared/ChatInterface";
 import { SessionInfo } from "../../components/shared/SessionInfo";
 import { TaskDescription } from "../../components/shared/TaskDescription";
 import { AUTDisplay } from "../../components/divergent/AUTDisplay";
-import { sendChatMessage } from "../../components/shared/api";
+import { sendChatMessage, logTaskCompletion } from "../../components/shared/api";
 import { useTelemetry } from "../../components/shared/useTelemetry";
 import { Message } from "../../components/shared/types";
 import { AUT_ITEMS, AUTItem, getRandomAUTItem } from "../../components/divergent/autData";
@@ -124,18 +124,7 @@ function DivergentTaskApp() {
     });
 
     try {
-      const response = await sendChatMessage(
-        messages,
-        "divergent",
-        telemetry,
-        qualtricsId,
-        sessionId, // Ensure sessionId is passed as subjectId
-        transcript,
-        taskResponses,
-        engagementMetrics,
-        startTime,
-        new Date().toISOString() // Set endTime dynamically
-      );
+      const response = await sendChatMessage([...messages, userMessage]);
 
       // Log the full response object for debugging
       console.log("Server response:", response);
@@ -273,17 +262,16 @@ function DivergentTaskApp() {
     };
 
     try {
-      await sendChatMessage(
-        transcript,
-        "divergent",
-        defaultTelemetry, // Pass fully complete telemetry object
-        qualtricsId,
+      await logTaskCompletion(
         sessionId,
+        "divergent",
         transcript,
         taskResponses,
         engagementMetrics,
         startTime,
-        endTime
+        endTime,
+        defaultTelemetry,
+        qualtricsId
       );
       console.log("Task completion data logged successfully.");
     } catch (error) {

@@ -7,7 +7,7 @@ import { ChatInterface } from "../../components/shared/ChatInterface";
 import { SessionInfo } from "../../components/shared/SessionInfo";
 import { TaskDescription } from "../../components/shared/TaskDescription";
 import { RATDisplay } from "../../components/convergent/RATDisplay";
-import { sendChatMessage } from "../../components/shared/api";
+import { sendChatMessage, logTaskCompletion } from "../../components/shared/api";
 import { useTelemetry } from "../../components/shared/useTelemetry";
 import { Message } from "../../components/shared/types";
 import { RAT_WORD_SETS, RATWordSet } from "../../components/convergent/ratData";
@@ -119,18 +119,7 @@ function ConvergentTaskApp() {
     });
 
     try {
-      const response = await sendChatMessage(
-        messages,
-        "convergent",
-        telemetry,
-        qualtricsId,
-        sessionId, // Ensure sessionId is passed as subjectId
-        transcript,
-        taskResponses,
-        engagementMetrics,
-        startTime,
-        new Date().toISOString() // Set endTime dynamically
-      );
+      const response = await sendChatMessage([...messages, userMessage]);
 
       // Update transcript and engagement metrics
       setTranscript((prev) => [...prev, { role: "user", content: input, timestamp: Date.now() }]);
@@ -269,17 +258,16 @@ function ConvergentTaskApp() {
     };
 
     try {
-      await sendChatMessage(
-        transcript,
-        "convergent",
-        defaultTelemetry, // Pass fully complete telemetry object
-        qualtricsId,
+      await logTaskCompletion(
         sessionId,
+        "convergent",
         transcript,
         taskResponses,
         engagementMetrics,
         startTime,
-        endTime
+        endTime,
+        defaultTelemetry,
+        qualtricsId
       );
       console.log("Task completion data logged successfully.");
     } catch (error) {

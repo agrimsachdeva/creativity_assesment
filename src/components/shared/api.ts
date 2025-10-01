@@ -1,32 +1,15 @@
 import { Message, Telemetry } from "./types";
 import { TelemetryCollector } from "./telemetryCollector";
 
+// Function for regular chat messages
 export async function sendChatMessage(
-  messages: Message[],
-  taskType: "divergent" | "convergent",
-  telemetry: Telemetry,
-  qualtricsId: string | null,
-  subjectId: string,
-  transcript: any,
-  taskResponses: any,
-  engagementMetrics: any,
-  startTime: string,
-  endTime: string
+  messages: Message[]
 ): Promise<Message> {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ 
-      messages, 
-      taskType, 
-      telemetry, 
-      qualtricsId,
-      subjectId,
-      transcript,
-      taskResponses,
-      engagementMetrics,
-      startTime,
-      endTime,
+      messages
     }),
   });
   
@@ -41,6 +24,40 @@ export async function sendChatMessage(
   }
   
   return { ...data.response, role: "assistant" };
+}
+
+// Function for task completion logging
+export async function logTaskCompletion(
+  subjectId: string,
+  taskType: "divergent" | "convergent",
+  transcript: any,
+  taskResponses: any,
+  engagementMetrics: any,
+  startTime: string,
+  endTime: string,
+  telemetry?: Telemetry,
+  qualtricsId?: string | null
+): Promise<void> {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ 
+      subjectId,
+      taskType, 
+      transcript,
+      taskResponses,
+      engagementMetrics,
+      startTime,
+      endTime,
+      telemetry, 
+      qualtricsId
+    }),
+  });
+  
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
+    throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+  }
 }
 
 // Legacy function for backward compatibility
