@@ -5,8 +5,9 @@ import { generateSessionId, generateUserId } from './api';
 
 export function useTelemetry(taskType: "divergent" | "convergent") {
   const collectorRef = useRef<TelemetryCollector | null>(null);
-  const sessionIdRef = useRef<string>(generateSessionId());
-  const userIdRef = useRef<string>(generateUserId());
+  const sessionIdRef = useRef<string>('');
+  const userIdRef = useRef<string>('');
+  const [isInitialized, setIsInitialized] = useState(false);
   const [engagementMetrics, setEngagementMetrics] = useState({
     copyPasteCount: 0,
     chatbotUsagePercentage: 0,
@@ -14,12 +15,23 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
   });
 
   useEffect(() => {
+    // Generate IDs only on the client to avoid hydration mismatch
+    if (!sessionIdRef.current) {
+      sessionIdRef.current = generateSessionId();
+    }
+    if (!userIdRef.current) {
+      userIdRef.current = generateUserId();
+    }
+
     // Initialize telemetry collector
     collectorRef.current = new TelemetryCollector(
       sessionIdRef.current,
       userIdRef.current,
       taskType
     );
+
+    // Mark as initialized
+    setIsInitialized(true);
 
     // Cleanup on unmount
     return () => {
@@ -82,8 +94,9 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
   }, []);
 
   return {
-    sessionId: sessionIdRef.current,
-    userId: userIdRef.current,
+    sessionId: isInitialized ? sessionIdRef.current : '',
+    userId: isInitialized ? userIdRef.current : '',
+    isInitialized,
     engagementMetrics,
     startMessageComposition,
     updateMessageContent,

@@ -63,7 +63,9 @@ export function AUTDisplay({
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
           <input
-            type="text"
+            id="idea-input"
+            name="newIdea"
+            type="text" 
             value={newIdea}
             onChange={(e) => onNewIdeaChange(e.target.value)}
             onKeyDown={handleKeyDown}

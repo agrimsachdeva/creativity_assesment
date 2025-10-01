@@ -30,7 +30,7 @@ function DivergentTaskApp() {
     chatbotUsagePercentage: 0,
     chatbotEngagementCount: 0,
   });
-  const [startTime, setStartTime] = useState(new Date().toISOString());
+  const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const searchParams = useSearchParams();
 
@@ -38,6 +38,7 @@ function DivergentTaskApp() {
   const {
     sessionId,
     userId,
+    isInitialized,
     startMessageComposition,
     updateMessageContent,
     completeMessage,
@@ -51,6 +52,9 @@ function DivergentTaskApp() {
     const id = searchParams.get("qualtricsId") || searchParams.get("id");
     if (id) setQualtricsId(id);
     
+    // Initialize startTime on client side only
+    setStartTime(new Date().toISOString());
+    
     // Initialize the first AUT round
     initializeAUTRound();
 
@@ -63,16 +67,6 @@ function DivergentTaskApp() {
       },
     ]);
   }, [searchParams]);
-
-  useEffect(() => {
-    // Ensure sessionId (used as subjectId) is initialized
-    if (!sessionId) {
-      console.error("Session ID is missing. Cannot proceed.");
-    }
-
-    // Initialize startTime
-    setStartTime(new Date().toISOString());
-  }, []);
 
   const initializeAUTRound = () => {
     // Use helper function for random selection
@@ -353,8 +347,8 @@ function DivergentTaskApp() {
         </div>
 
         {/* ChatGPT Section */}
-        <div className="flex-1 max-w-2xl flex flex-col bg-white/10 rounded-2xl border border-white/20 shadow-md min-h-[60vh] max-h-[80vh] p-4 md:p-6 overflow-hidden">
-          <div className="flex-1 flex flex-col overflow-auto custom-scrollbar">
+        <div className="flex-1 max-w-2xl flex flex-col bg-white/10 rounded-2xl border border-white/20 shadow-md min-h-[60vh] max-h-[80vh] p-4 md:p-6">
+          <div className="flex-1 flex flex-col min-h-0">
             <ChatInterface
               messages={messages}
               input={input}
@@ -368,6 +362,7 @@ function DivergentTaskApp() {
               emptyStateTitle="Ready to Unleash Your Creativity?"
               emptyStateDescription="Let your imagination soar! Generate multiple unique ideas, explore unconventional solutions, and think beyond boundaries."
             />
+
           </div>
         </div>
       </div>

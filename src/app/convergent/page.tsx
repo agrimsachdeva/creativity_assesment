@@ -29,7 +29,7 @@ function ConvergentTaskApp() {
     chatbotUsagePercentage: 0,
     chatbotEngagementCount: 0,
   });
-  const [startTime, setStartTime] = useState(new Date().toISOString());
+  const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const searchParams = useSearchParams();
 
@@ -37,6 +37,7 @@ function ConvergentTaskApp() {
   const {
     sessionId,
     userId,
+    isInitialized,
     startMessageComposition,
     updateMessageContent,
     completeMessage,
@@ -49,6 +50,9 @@ function ConvergentTaskApp() {
     // Extract parameters from URL
     const id = searchParams.get("qualtricsId") || searchParams.get("id");
     if (id) setQualtricsId(id);
+    
+    // Initialize startTime on client side only
+    setStartTime(new Date().toISOString());
     
     // Initialize the first RAT round
     initializeRATRound();
@@ -218,7 +222,27 @@ function ConvergentTaskApp() {
         responseLatency: 0,
         taskSwitching: 0,
       },
-      linguisticFeatures: {},
+      linguisticFeatures: {
+        wordCount: 0,
+        charCount: 0,
+        avgWordLength: 0,
+        sentenceCount: 0,
+        avgSentenceLength: 0,
+        vocabularyRichness: 0,
+        readabilityScore: 0,
+        semanticComplexity: 0,
+        emotionalTone: {
+          positive: 0,
+          negative: 0,
+          neutral: 1,
+        },
+        creativityIndicators: {
+          uniqueWords: 0,
+          metaphorCount: 0,
+          questionCount: 0,
+          ideaCount: 0,
+        },
+      },
       messageMetrics: {
         responseTime: 0,
         messageLength: 0,
@@ -230,7 +254,11 @@ function ConvergentTaskApp() {
       totalMessages: transcript.length,
       avgMessageInterval: 0,
       taskCompletion: true,
-      qualityMetrics: null,
+      qualityMetrics: {
+        relevanceScore: 0,
+        creativityScore: 0,
+        coherenceScore: 0,
+      },
       attentionTracking: {
         focusEvents: [],
         visibilityChanges: [],
@@ -288,6 +316,7 @@ function ConvergentTaskApp() {
                 </label>
                 <input
                   id="finalAnswer"
+                  name="finalAnswer"
                   type="text"
                   value={finalAnswer}
                   onChange={(e) => setFinalAnswer(e.target.value)}
@@ -320,8 +349,8 @@ function ConvergentTaskApp() {
         </div>
 
         {/* ChatGPT Section */}
-        <div className="flex-1 max-w-2xl flex flex-col bg-white/10 rounded-2xl border border-white/20 shadow-md min-h-[60vh] max-h-[80vh] p-4 md:p-6 overflow-hidden">
-          <div className="flex-1 flex flex-col overflow-auto custom-scrollbar">
+        <div className="flex-1 max-w-2xl flex flex-col bg-white/10 rounded-2xl border border-white/20 shadow-md min-h-[60vh] max-h-[80vh] p-4 md:p-6">
+          <div className="flex-1 flex flex-col min-h-0">
             <ChatInterface
               messages={messages}
               input={input}
@@ -335,6 +364,7 @@ function ConvergentTaskApp() {
               emptyStateTitle="Ready for the Challenge?"
               emptyStateDescription="Use focused thinking to find the word that connects all three given words. Work systematically through possibilities!"
             />
+
           </div>
         </div>
       </div>
