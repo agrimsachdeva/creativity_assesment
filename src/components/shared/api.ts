@@ -5,7 +5,13 @@ export async function sendChatMessage(
   messages: Message[],
   taskType: "divergent" | "convergent",
   telemetry: Telemetry,
-  qualtricsId: string | null
+  qualtricsId: string | null,
+  subjectId: string,
+  transcript: any,
+  taskResponses: any,
+  engagementMetrics: any,
+  startTime: string,
+  endTime: string
 ): Promise<Message> {
   const res = await fetch("/api/chat", {
     method: "POST",
@@ -14,7 +20,13 @@ export async function sendChatMessage(
       messages, 
       taskType, 
       telemetry, 
-      qualtricsId 
+      qualtricsId,
+      subjectId,
+      transcript,
+      taskResponses,
+      engagementMetrics,
+      startTime,
+      endTime,
     }),
   });
   

@@ -7,90 +7,62 @@ const openai = new OpenAI({
 });
 
 export async function POST(req: NextRequest) {
-  const { messages, taskType, telemetry, qualtricsId } = await req.json();
-  const userAgent = req.headers.get("user-agent");
-  const ip = req.headers.get("x-forwarded-for") || null;
-  const timestamp = Date.now();
+  const {
+    subjectId, // Unique identifier for the subject
+    taskType, // Task type (e.g., 'divergent' or 'convergent')
+    transcript, // Full chat transcript (user and AI messages)
+    taskResponses, // Responses to the task (e.g., AUT ideas or RAT answers)
+    engagementMetrics, // Analytics (e.g., copy/paste info, chatbot usage)
+    startTime, // Experiment start time
+    endTime, // Experiment end time
+    qualtricsId // Optional Qualtrics ID for tracking
+  } = await req.json();
 
-  // Log interaction to Vercel Postgres (with error handling for development)
-  try {
-    if (process.env.POSTGRES_URL && process.env.POSTGRES_URL !== "your-vercel-postgres-connection-string-here") {
-      await sql`
-        INSERT INTO interactions (messages, task_type, telemetry, user_agent, ip, timestamp, qualtrics_id)
-        VALUES (${JSON.stringify(messages)}, ${taskType || null}, ${JSON.stringify(telemetry)}, ${userAgent}, ${ip}, ${timestamp}, ${qualtricsId || null})
-      `;
-    } else {
-      console.log("Database not configured - interaction data would be logged here:", {
-        messages: messages.length + " messages",
-        taskType,
-        qualtricsId,
-        timestamp: new Date(timestamp).toISOString()
-      });
-    }
-  } catch (error) {
-    console.error("Database logging error:", error);
-    // Continue with API call even if database logging fails
+  // Validate required fields
+  const missingFields = [];
+  if (!subjectId) missingFields.push("subjectId");
+  if (!taskType) missingFields.push("taskType");
+  if (!transcript) missingFields.push("transcript");
+  if (!taskResponses) missingFields.push("taskResponses");
+  if (!engagementMetrics) missingFields.push("engagementMetrics");
+  if (!startTime) missingFields.push("startTime");
+  if (!endTime) missingFields.push("endTime");
+
+  if (missingFields.length > 0) {
+    console.error("Missing required fields:", missingFields);
+    return NextResponse.json({
+      error: `Missing required fields: ${missingFields.join(", ")}`
+    }, { status: 400 });
   }
 
-  // Call OpenAI API
   try {
-    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === "your-openai-api-key-here") {
-      // Mock response for development/testing
-      const mockResponse = {
-        role: "assistant",
-        content: `🤖 **[DEMO MODE]** This is a simulated AI response since no OpenAI API key is configured. 
+    await sql`
+      INSERT INTO interactions (
+        subject_id, task_type, transcript, task_responses, engagement_metrics, start_time, end_time, qualtrics_id
+      ) VALUES (
+        ${subjectId}, ${taskType}, ${JSON.stringify(transcript)}, ${JSON.stringify(taskResponses)}, ${JSON.stringify(engagementMetrics)}, ${startTime}, ${endTime}, ${qualtricsId}
+      )
+    `;
 
-${taskType === "convergent" 
-  ? "For the RAT task, I would help you think through the connections between the three words and suggest possible answers based on common associations, wordplay, and semantic relationships."
-  : "For divergent thinking, I would encourage you to explore multiple creative possibilities, ask thought-provoking questions, and help you break conventional thinking patterns to generate innovative ideas."
-}
-
-*To enable real ChatGPT responses, please add your OpenAI API key to the .env.local file.*`,
-        timestamp: Date.now(),
-      };
-      
-      return NextResponse.json({ response: mockResponse });
-    }
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages,
-    });
-    
-    const aiResponse = {
-      role: "assistant",
-      content: completion.choices[0].message.content,
-      timestamp: Date.now(),
+    const responsePayload = {
+      success: true,
+      response: {
+        subjectId,
+        taskType,
+        transcript,
+        taskResponses,
+        engagementMetrics,
+        startTime,
+        endTime,
+        qualtricsId
+      }
     };
 
-    return NextResponse.json({ response: aiResponse });
+    console.log("Server response payload:", responsePayload);
+    return NextResponse.json(responsePayload);
   } catch (error) {
-    console.error("OpenAI API error:", error);
-    
-    // Provide specific error messages based on the error type
-    if (error instanceof Error) {
-      if (error.message.includes("401") || error.message.includes("Incorrect API key")) {
-        return NextResponse.json(
-          { error: "Invalid or expired OpenAI API key. Please check your API key in .env.local file." }, 
-          { status: 401 }
-        );
-      } else if (error.message.includes("429")) {
-        return NextResponse.json(
-          { error: "OpenAI API rate limit exceeded. Please try again later." }, 
-          { status: 429 }
-        );
-      } else if (error.message.includes("insufficient_quota")) {
-        return NextResponse.json(
-          { error: "OpenAI API quota exceeded. Please check your billing on OpenAI platform." }, 
-          { status: 402 }
-        );
-      }
-    }
-    
-    return NextResponse.json(
-      { error: "Failed to get AI response" }, 
-      { status: 500 }
-    );
+    console.error("Database logging error:", error);
+    return NextResponse.json({ error: "Failed to save interaction data" }, { status: 500 });
   }
 }
 

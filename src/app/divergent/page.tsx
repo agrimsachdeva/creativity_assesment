@@ -23,6 +23,15 @@ function DivergentTaskApp() {
   const [ideas, setIdeas] = useState<string[]>([]);
   const [newIdea, setNewIdea] = useState("");
   const [completed, setCompleted] = useState(false);
+  const [transcript, setTranscript] = useState<Message[]>([]);
+  const [taskResponses, setTaskResponses] = useState<string[]>([]);
+  const [engagementMetrics, setEngagementMetrics] = useState({
+    copyPasteCount: 0,
+    chatbotUsagePercentage: 0,
+    chatbotEngagementCount: 0,
+  });
+  const [startTime, setStartTime] = useState(new Date().toISOString());
+  const [endTime, setEndTime] = useState("");
   const searchParams = useSearchParams();
 
   // Initialize advanced telemetry
@@ -55,6 +64,16 @@ function DivergentTaskApp() {
     ]);
   }, [searchParams]);
 
+  useEffect(() => {
+    // Ensure sessionId (used as subjectId) is initialized
+    if (!sessionId) {
+      console.error("Session ID is missing. Cannot proceed.");
+    }
+
+    // Initialize startTime
+    setStartTime(new Date().toISOString());
+  }, []);
+
   const initializeAUTRound = () => {
     // Use helper function for random selection
     const selectedItem = getRandomAUTItem();
@@ -85,61 +104,63 @@ function DivergentTaskApp() {
     const userMessage: Message = { role: "user", content: input, timestamp: Date.now() };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Generate comprehensive telemetry
+    // Generate telemetry
     const telemetry = generateTelemetry(
       currentRound,
-      null, // AUT doesn't use word sets like RAT
-      ideas.length > 0 ? 100 : 0, // Progress based on whether ideas have been added
+      null,
+      ideas.length > 0 ? 100 : 0,
       completed,
       input
     );
 
-    const currentInput = input;
-    setInput("");
+    if (!telemetry) {
+      console.error("Telemetry is null. Cannot proceed.");
+      setLoading(false);
+      return;
+    }
+
+    // Log required fields for debugging
+    console.log("Debugging sendChatMessage fields:", {
+      subjectId: sessionId,
+      transcript,
+      taskResponses,
+      engagementMetrics,
+      startTime,
+      endTime: new Date().toISOString(),
+    });
 
     try {
-      const startTime = Date.now();
-      recordResponseLatency();
-
-      const aiMessage = await sendChatMessage(
-        [...messages, userMessage], 
-        "divergent", 
-        telemetry!, 
-        qualtricsId
+      const response = await sendChatMessage(
+        messages,
+        "divergent",
+        telemetry,
+        qualtricsId,
+        sessionId, // Ensure sessionId is passed as subjectId
+        transcript,
+        taskResponses,
+        engagementMetrics,
+        startTime,
+        new Date().toISOString() // Set endTime dynamically
       );
 
-      const responseTime = Date.now() - startTime;
-      recordAiResponse(responseTime);
+      // Log the full response object for debugging
+      console.log("Server response:", response);
 
-      setMessages((prev) => [...prev, aiMessage]);
+      // Update transcript and engagement metrics
+      setTranscript((prev) => [...prev, { role: "user", content: input, timestamp: Date.now() }]);
+      setEngagementMetrics((prev) => ({
+        ...prev,
+        chatbotEngagementCount: prev.chatbotEngagementCount + 1,
+      }));
+
+      // Handle response
+      if (response && response.role && response.content) {
+        setMessages((prev) => [...prev, response]);
+      } else {
+        console.error("Invalid response format:", response);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
-
-      // Provide specific error messages based on the error
-      let errorContent = "Sorry, I encountered an error. Please try again.";
-
-      if (error instanceof Error) {
-        if (error.message.includes("OpenAI API key not configured")) {
-          errorContent = "🔧 The AI service is not yet configured. Please contact the administrator to set up the OpenAI API key.";
-        } else if (error.message.includes("Invalid or expired OpenAI API key")) {
-          errorContent = "🔑 The OpenAI API key appears to be invalid or expired. Please check the API key in your .env.local file and ensure it starts with 'sk-'.";
-        } else if (error.message.includes("rate limit exceeded")) {
-          errorContent = "⏱️ Too many requests to the AI service. Please wait a moment and try again.";
-        } else if (error.message.includes("quota exceeded")) {
-          errorContent = "💳 The OpenAI API quota has been exceeded. Please check your billing settings on the OpenAI platform.";
-        } else if (error.message.includes("Failed to get AI response")) {
-          errorContent = "🤖 I'm having trouble connecting to the AI service right now. Please try again in a moment.";
-        } else if (error.message.includes("HTTP error")) {
-          errorContent = "🌐 There's a connection issue. Please check your internet connection and try again.";
-        }
-      }
-
-      const errorMessage: Message = {
-        role: "assistant",
-        content: errorContent,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
     }
 
     setLoading(false);
@@ -153,6 +174,135 @@ function DivergentTaskApp() {
       setCompleted(true);
     }
   };
+
+  const handleTaskCompletion = async () => {
+    setEndTime(new Date().toISOString());
+
+    // Log required fields for debugging
+    console.log("Logging task completion data:", {
+      subjectId: sessionId,
+      transcript,
+      taskResponses,
+      engagementMetrics,
+      startTime,
+      endTime,
+    });
+
+    const defaultTelemetry = {
+      sessionId: sessionId || "unknown",
+      userId: userId || "unknown",
+      timestamp: Date.now(),
+      language: "en",
+      platform: "web",
+      userAgent: navigator.userAgent,
+      screenResolution: `${window.screen.width}x${window.screen.height}`,
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      devicePixelRatio: window.devicePixelRatio,
+      taskType: "divergent" as const,
+      taskProgress: 100,
+      currentRound: currentRound,
+      currentWordSet: null,
+      typingPattern: {
+        totalKeypresses: 0,
+        backspaceCount: 0,
+        pauseCount: 0,
+        avgTypingSpeed: 0,
+        peakTypingSpeed: 0,
+        keystrokeDynamics: {
+          dwellTimes: [],
+          flightTimes: [],
+          rhythm: 0,
+        },
+        correctionRatio: 0,
+        pauseDistribution: [],
+      },
+      mouseActivity: [],
+      keystrokeSequence: [],
+      cognitiveLoad: {
+        thinkingPauses: 0,
+        avgThinkingTime: 0,
+        longestPause: 0,
+        editingBehavior: {
+          revisions: 0,
+          deletions: 0,
+          insertions: 0,
+          cursorMovements: 0,
+        },
+        responseLatency: 0,
+        taskSwitching: 0,
+      },
+      linguisticFeatures: {
+        wordCount: 0,
+        charCount: 0,
+        avgWordLength: 0,
+        sentenceCount: 0,
+        avgSentenceLength: 0,
+        vocabularyRichness: 0,
+        readabilityScore: 0,
+        semanticComplexity: 0,
+        emotionalTone: {
+          positive: 0,
+          negative: 0,
+          neutral: 1,
+        },
+        creativityIndicators: {
+          uniqueWords: 0,
+          metaphorCount: 0,
+          questionCount: 0,
+          ideaCount: 0,
+        },
+      },
+      messageMetrics: {
+        responseTime: 0,
+        messageLength: 0,
+        editCount: 0,
+        finalMessageDifferentFromFirst: false,
+      },
+      interactionSequence: [],
+      sessionDuration: new Date(endTime).getTime() - new Date(startTime).getTime(),
+      totalMessages: transcript.length,
+      avgMessageInterval: 0,
+      taskCompletion: true,
+      qualityMetrics: {
+        relevanceScore: 0,
+        creativityScore: 0,
+        coherenceScore: 0,
+      },
+      attentionTracking: {
+        focusEvents: [],
+        visibilityChanges: [],
+        scrollBehavior: [],
+      },
+      featureVector: [],
+      temporalFeatures: [],
+    };
+
+    try {
+      await sendChatMessage(
+        transcript,
+        "divergent",
+        defaultTelemetry, // Pass fully complete telemetry object
+        qualtricsId,
+        sessionId,
+        transcript,
+        taskResponses,
+        engagementMetrics,
+        startTime,
+        endTime
+      );
+      console.log("Task completion data logged successfully.");
+    } catch (error) {
+      console.error("Error logging task completion data:", error);
+    }
+  };
+
+  // Call handleTaskCompletion when the task is marked as completed
+  useEffect(() => {
+    if (completed) {
+      handleTaskCompletion();
+    }
+  }, [completed]);
 
   return (
     <Background>

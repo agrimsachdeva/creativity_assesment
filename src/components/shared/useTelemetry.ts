@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { TelemetryCollector } from './telemetryCollector';
 import { AdvancedTelemetry } from './types';
 import { generateSessionId, generateUserId } from './api';
@@ -7,6 +7,11 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
   const collectorRef = useRef<TelemetryCollector | null>(null);
   const sessionIdRef = useRef<string>(generateSessionId());
   const userIdRef = useRef<string>(generateUserId());
+  const [engagementMetrics, setEngagementMetrics] = useState({
+    copyPasteCount: 0,
+    chatbotUsagePercentage: 0,
+    chatbotEngagementCount: 0,
+  });
 
   useEffect(() => {
     // Initialize telemetry collector
@@ -44,6 +49,20 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
     collectorRef.current?.recordResponseLatency();
   }, []);
 
+  const recordCopyPaste = useCallback(() => {
+    setEngagementMetrics((prev) => ({
+      ...prev,
+      copyPasteCount: prev.copyPasteCount + 1,
+    }));
+  }, []);
+
+  const recordChatbotUsage = useCallback((percentage: number) => {
+    setEngagementMetrics((prev) => ({
+      ...prev,
+      chatbotUsagePercentage: percentage,
+    }));
+  }, []);
+
   const generateTelemetry = useCallback((
     currentRound?: number | null,
     currentWordSet?: { words: string[]; answer: string } | null,
@@ -65,11 +84,14 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
   return {
     sessionId: sessionIdRef.current,
     userId: userIdRef.current,
+    engagementMetrics,
     startMessageComposition,
     updateMessageContent,
     completeMessage,
     recordAiResponse,
     recordResponseLatency,
+    recordCopyPaste,
+    recordChatbotUsage,
     generateTelemetry
   };
 }
