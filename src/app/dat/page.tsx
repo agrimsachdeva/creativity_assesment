@@ -15,7 +15,7 @@ function DATTaskApp() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [qualtricsId, setQualtricsId] = useState<string | null>(null);
+  const [participantId, setParticipantId] = useState<string | null>(null); // Primary ID from Qualtrics URL
   const [words, setWords] = useState<string[]>([]);
   const [completed, setCompleted] = useState(false);
   const [transcript, setTranscript] = useState<Message[]>([]);
@@ -43,9 +43,20 @@ function DATTaskApp() {
   } = useTelemetry("divergent");
 
   useEffect(() => {
-    // Extract parameters from URL
-    const id = searchParams.get("qualtricsId") || searchParams.get("id");
-    if (id) setQualtricsId(id);
+    // Extract participant ID from URL - supports multiple parameter names for flexibility
+    // Qualtrics can pass: ?participantId=XXX, ?PROLIFIC_PID=XXX, ?id=XXX, or ?qualtricsId=XXX
+    const id = searchParams.get("participantId") 
+      || searchParams.get("PROLIFIC_PID") 
+      || searchParams.get("id") 
+      || searchParams.get("qualtricsId")
+      || searchParams.get("pid");
+    
+    if (id) {
+      setParticipantId(id);
+      console.log("[Telemetry] Participant ID from URL:", id);
+    } else {
+      console.warn("[Telemetry] No participant ID found in URL. Using session ID as fallback.");
+    }
     
     // Initialize startTime on client side only
     setStartTime(new Date().toISOString());
@@ -142,18 +153,29 @@ function DATTaskApp() {
   };
 
   const handleTaskCompletion = async () => {
-    const endTime = new Date().toISOString();
-    setEndTime(endTime);
+    // Use participantId from URL if available, otherwise fall back to sessionId
+    const subjectId = participantId || sessionId;
+    
+    // Guard: ensure we have a valid subject ID
+    if (!subjectId) {
+      console.error("=== TASK COMPLETION ABORTED: No subject ID available ===");
+      console.error("participantId:", participantId, "sessionId:", sessionId);
+      return;
+    }
+    
+    const currentEndTime = new Date().toISOString();
+    setEndTime(currentEndTime);
 
     // Log required fields for debugging
-    console.log("Logging task completion data:", {
-      subjectId: sessionId,
-      transcript,
-      taskResponses,
-      engagementMetrics,
-      startTime,
-      endTime,
-    });
+    console.log("=== TASK COMPLETION DEBUG ===");
+    console.log("subjectId (from URL or session):", subjectId);
+    console.log("participantId (from URL):", participantId);
+    console.log("sessionId (generated):", sessionId);
+    console.log("transcript:", transcript);
+    console.log("taskResponses:", taskResponses);
+    console.log("engagementMetrics:", engagementMetrics);
+    console.log("startTime:", startTime);
+    console.log("endTime:", currentEndTime);
 
     // Create comprehensive telemetry data
     const defaultTelemetry = {
@@ -248,19 +270,19 @@ function DATTaskApp() {
 
     try {
       await logTaskCompletion(
-        sessionId,
+        subjectId, // Use participantId from URL or fallback to sessionId
         "divergent",
         transcript,
         words.filter(w => w.trim() !== ""), // Pass the actual words as task responses
         engagementMetrics,
         startTime,
-        endTime,
+        currentEndTime,
         defaultTelemetry,
-        qualtricsId
+        participantId // Pass participantId separately for reference
       );
-      console.log("Task completion data logged successfully.");
+      console.log("=== TASK COMPLETION SUCCESS ===");
     } catch (error) {
-      console.error("Error logging task completion data:", error);
+      console.error("=== TASK COMPLETION ERROR ===", error);
     }
   };
 
@@ -311,7 +333,7 @@ function DATTaskApp() {
           <div className="mt-8">
             <SessionInfo 
               sessionId={sessionId}
-              qualtricsId={qualtricsId}
+              qualtricsId={participantId}
             />
           </div>
         </div>

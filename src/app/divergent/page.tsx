@@ -16,7 +16,7 @@ function DivergentTaskApp() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [qualtricsId, setQualtricsId] = useState<string | null>(null);
+  const [participantId, setParticipantId] = useState<string | null>(null); // Primary ID from Qualtrics URL
   const [currentRound, setCurrentRound] = useState(1);
   const [currentItem, setCurrentItem] = useState<AUTItem | null>(null);
   const [totalRounds, setTotalRounds] = useState(3); // Total number of rounds
@@ -54,9 +54,20 @@ function DivergentTaskApp() {
   } = useTelemetry("divergent");
 
   useEffect(() => {
-    // Extract parameters from URL
-    const id = searchParams.get("qualtricsId") || searchParams.get("id");
-    if (id) setQualtricsId(id);
+    // Extract participant ID from URL - supports multiple parameter names for flexibility
+    // Qualtrics can pass: ?participantId=XXX, ?PROLIFIC_PID=XXX, ?id=XXX, or ?qualtricsId=XXX
+    const id = searchParams.get("participantId") 
+      || searchParams.get("PROLIFIC_PID") 
+      || searchParams.get("id") 
+      || searchParams.get("qualtricsId")
+      || searchParams.get("pid");
+    
+    if (id) {
+      setParticipantId(id);
+      console.log("[Telemetry] Participant ID from URL:", id);
+    } else {
+      console.warn("[Telemetry] No participant ID found in URL. Using session ID as fallback.");
+    }
     
     // Initialize startTime on client side only
     setStartTime(new Date().toISOString());
@@ -172,10 +183,13 @@ function DivergentTaskApp() {
   };
 
   const handleTaskCompletion = async () => {
-    // Guard: ensure telemetry is initialized
-    if (!isInitialized || !sessionId) {
-      console.error("=== TASK COMPLETION ABORTED: Telemetry not initialized ===");
-      console.error("isInitialized:", isInitialized, "sessionId:", sessionId);
+    // Use participantId from URL if available, otherwise fall back to sessionId
+    const subjectId = participantId || sessionId;
+    
+    // Guard: ensure we have a valid subject ID
+    if (!subjectId) {
+      console.error("=== TASK COMPLETION ABORTED: No subject ID available ===");
+      console.error("participantId:", participantId, "sessionId:", sessionId);
       return;
     }
     
@@ -187,13 +201,14 @@ function DivergentTaskApp() {
 
     // Log required fields for debugging
     console.log("=== TASK COMPLETION DEBUG ===");
-    console.log("subjectId (sessionId):", sessionId);
+    console.log("subjectId (from URL or session):", subjectId);
+    console.log("participantId (from URL):", participantId);
+    console.log("sessionId (generated):", sessionId);
     console.log("transcript:", transcript);
     console.log("taskResponses:", taskResponses);
     console.log("engagementMetrics:", completeEngagementData);
     console.log("startTime:", startTime);
     console.log("endTime:", currentEndTime);
-    console.log("qualtricsId:", qualtricsId);
 
     const defaultTelemetry = {
       sessionId: sessionId || "unknown",
@@ -287,7 +302,7 @@ function DivergentTaskApp() {
 
     try {
       await logTaskCompletion(
-        sessionId,
+        subjectId, // Use participantId from URL or fallback to sessionId
         "divergent",
         transcript,
         taskResponses,
@@ -295,7 +310,7 @@ function DivergentTaskApp() {
         startTime,
         currentEndTime, // Use local variable, not state
         defaultTelemetry,
-        qualtricsId
+        participantId // Pass participantId separately for reference
       );
       console.log("=== TASK COMPLETION SUCCESS ===");
     } catch (error) {
@@ -351,7 +366,7 @@ function DivergentTaskApp() {
           </div>
           <div className="mt-8">
             <SessionInfo 
-              qualtricsId={qualtricsId}
+              qualtricsId={participantId}
               sessionId={sessionId}
               userId={userId}
             />
