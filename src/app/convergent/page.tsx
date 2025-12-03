@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Background } from "../../components/shared/Background";
 import { Header } from "../../components/shared/Header";
@@ -19,6 +19,7 @@ function ConvergentTaskApp() {
   const [participantId, setParticipantId] = useState<string | null>(null); // Primary ID from Qualtrics URL
   const [currentRound, setCurrentRound] = useState(1);
   const [currentWordSet, setCurrentWordSet] = useState<RATWordSet | null>(null);
+  const usedWordSetIndicesRef = useRef<number[]>([]); // Use ref to avoid stale closure issues
   const [totalRounds, setTotalRounds] = useState(4); // Easily configurable total number of rounds
   const [finalAnswer, setFinalAnswer] = useState("");
   const [completed, setCompleted] = useState(false);
@@ -86,10 +87,28 @@ function ConvergentTaskApp() {
   }, [searchParams]);
 
   const initializeRATRound = () => {
-    // Randomly select a word set for the current round
-    const randomIndex = Math.floor(Math.random() * RAT_WORD_SETS.length);
-    const selectedWordSet = RAT_WORD_SETS[randomIndex];
+    // Get available indices (not yet used)
+    const availableIndices = RAT_WORD_SETS
+      .map((_, index) => index)
+      .filter(index => !usedWordSetIndicesRef.current.includes(index));
+    
+    // If all word sets have been used, reset (shouldn't happen if totalRounds <= RAT_WORD_SETS.length)
+    if (availableIndices.length === 0) {
+      console.warn("All RAT word sets have been used. Resetting...");
+      usedWordSetIndicesRef.current = [];
+      const randomIndex = Math.floor(Math.random() * RAT_WORD_SETS.length);
+      setCurrentWordSet(RAT_WORD_SETS[randomIndex]);
+      usedWordSetIndicesRef.current = [randomIndex];
+      return;
+    }
+    
+    // Randomly select from available word sets
+    const randomAvailableIndex = Math.floor(Math.random() * availableIndices.length);
+    const selectedIndex = availableIndices[randomAvailableIndex];
+    const selectedWordSet = RAT_WORD_SETS[selectedIndex];
+    
     setCurrentWordSet(selectedWordSet);
+    usedWordSetIndicesRef.current = [...usedWordSetIndicesRef.current, selectedIndex];
   };
 
   const handleStartComposition = () => {

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Background } from "../../components/shared/Background";
 import { Header } from "../../components/shared/Header";
@@ -10,7 +10,7 @@ import { AUTDisplay } from "../../components/divergent/AUTDisplay";
 import { sendChatMessage, logTaskCompletion } from "../../components/shared/api";
 import { useTelemetry } from "../../components/shared/useTelemetry";
 import { Message } from "../../components/shared/types";
-import { AUT_ITEMS, AUTItem, getRandomAUTItem } from "../../components/divergent/autData";
+import { AUT_ITEMS, AUTItem } from "../../components/divergent/autData";
 
 function DivergentTaskApp() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -19,6 +19,7 @@ function DivergentTaskApp() {
   const [participantId, setParticipantId] = useState<string | null>(null); // Primary ID from Qualtrics URL
   const [currentRound, setCurrentRound] = useState(1);
   const [currentItem, setCurrentItem] = useState<AUTItem | null>(null);
+  const usedItemIndicesRef = useRef<number[]>([]); // Track used AUT items to avoid duplicates
   const [totalRounds, setTotalRounds] = useState(3); // Total number of rounds
   const [ideas, setIdeas] = useState<string[]>([]);
   const [newIdea, setNewIdea] = useState("");
@@ -87,9 +88,29 @@ function DivergentTaskApp() {
   }, [searchParams]);
 
   const initializeAUTRound = () => {
-    // Use helper function for random selection
-    const selectedItem = getRandomAUTItem();
+    // Get available indices (not yet used)
+    const availableIndices = AUT_ITEMS
+      .map((_, index) => index)
+      .filter(index => !usedItemIndicesRef.current.includes(index));
+    
+    // If all items have been used, reset (shouldn't happen if totalRounds <= AUT_ITEMS.length)
+    if (availableIndices.length === 0) {
+      console.warn("All AUT items have been used. Resetting...");
+      usedItemIndicesRef.current = [];
+      const randomIndex = Math.floor(Math.random() * AUT_ITEMS.length);
+      setCurrentItem(AUT_ITEMS[randomIndex]);
+      usedItemIndicesRef.current = [randomIndex];
+      setIdeas([]); // Reset ideas for new round
+      return;
+    }
+    
+    // Randomly select from available items
+    const randomAvailableIndex = Math.floor(Math.random() * availableIndices.length);
+    const selectedIndex = availableIndices[randomAvailableIndex];
+    const selectedItem = AUT_ITEMS[selectedIndex];
+    
     setCurrentItem(selectedItem);
+    usedItemIndicesRef.current = [...usedItemIndicesRef.current, selectedIndex];
     setIdeas([]); // Reset ideas for new round
   };
 
