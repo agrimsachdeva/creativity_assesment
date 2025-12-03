@@ -6,6 +6,18 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// CORS headers for iframe embedding (Qualtrics)
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+// Handle OPTIONS preflight requests
+export async function OPTIONS() {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -48,7 +60,7 @@ export async function POST(req: NextRequest) {
           };
 
           console.log("Returning AI response:", response);
-          return NextResponse.json({ response });
+          return NextResponse.json({ response }, { headers: corsHeaders });
         } else {
           throw new Error("No response from OpenAI");
         }
@@ -60,7 +72,7 @@ export async function POST(req: NextRequest) {
             content: "I'm sorry, I'm having trouble responding right now. Please try again.",
             timestamp: Date.now()
           }
-        });
+        }, { headers: corsHeaders });
       }
     } 
     
@@ -72,7 +84,7 @@ export async function POST(req: NextRequest) {
       
       if (missingFields.length > 0) {
         console.log("Missing required fields for task completion:", missingFields);
-        return NextResponse.json({ error: `Missing required fields: ${missingFields.join(", ")}` }, { status: 400 });
+        return NextResponse.json({ error: `Missing required fields: ${missingFields.join(", ")}` }, { status: 400, headers: corsHeaders });
       }
 
       console.log("=== ATTEMPTING DATABASE INSERT ===");
@@ -106,13 +118,13 @@ export async function POST(req: NextRequest) {
             content: "Task completed successfully. Thank you for your participation!",
             timestamp: Date.now()
           }
-        });
+        }, { headers: corsHeaders });
       } catch (dbError) {
         console.error("=== DATABASE ERROR ===");
         console.error("Error name:", (dbError as Error).name);
         console.error("Error message:", (dbError as Error).message);
         console.error("Full error:", dbError);
-        return NextResponse.json({ error: "Failed to save interaction data", details: (dbError as Error).message }, { status: 500 });
+        return NextResponse.json({ error: "Failed to save interaction data", details: (dbError as Error).message }, { status: 500, headers: corsHeaders });
       }
     } 
     
@@ -127,17 +139,17 @@ export async function POST(req: NextRequest) {
       console.log("startTime:", startTime, "truthy:", !!startTime);
       console.log("endTime:", endTime, "truthy:", !!endTime);
       console.log("messages:", messages, "truthy:", !!messages);
-      return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid request format" }, { status: 400, headers: corsHeaders });
     }
 
   } catch (error) {
     console.error("General API error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500, headers: corsHeaders });
   }
 }
 
 export async function GET() {
   // For admin: return all logs (protect in production)
   const { rows } = await sql`SELECT * FROM interactions ORDER BY timestamp DESC LIMIT 100`;
-  return NextResponse.json({ logs: rows });
+  return NextResponse.json({ logs: rows }, { headers: corsHeaders });
 }
