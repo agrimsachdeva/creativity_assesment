@@ -138,6 +138,8 @@ function DATTaskApp() {
       // Handle response
       if (response && response.role && response.content) {
         setMessages((prev) => [...prev, response]);
+        // Add AI response to transcript
+        setTranscript((prev) => [...prev, { role: "assistant", content: response.content, timestamp: Date.now() }]);
       } else {
         console.error("Invalid response format:", response);
       }

@@ -149,6 +149,8 @@ function ConvergentTaskApp() {
       // Handle response
       if (response && response.role && response.content) {
         setMessages((prev) => [...prev, response]);
+        // Add AI response to transcript
+        setTranscript((prev) => [...prev, { role: "assistant", content: response.content, timestamp: Date.now() }]);
         // Track AI response text for usage analysis
         recordAiResponseText(response.content);
       } else {
