@@ -24,6 +24,7 @@ function ConvergentTaskApp() {
   const [completed, setCompleted] = useState(false);
   const [transcript, setTranscript] = useState<Message[]>([]);
   const [taskResponses, setTaskResponses] = useState<string[]>([]);
+  const [taskData, setTaskData] = useState<Array<{ prompt: string[]; correctAnswer: string; userAnswer: string }>>([]);
   const [engagementMetrics, setEngagementMetrics] = useState({
     copyPasteCount: 0,
     chatbotUsagePercentage: 0,
@@ -170,6 +171,15 @@ function ConvergentTaskApp() {
     calculateAiUsageInAnswer(finalAnswer);
     // Store the answer
     setTaskResponses(prev => [...prev, finalAnswer]);
+    
+    // Save current round's data (prompt + response) 
+    if (currentWordSet) {
+      setTaskData(prev => [...prev, {
+        prompt: currentWordSet.words,
+        correctAnswer: currentWordSet.answer,
+        userAnswer: finalAnswer.trim()
+      }]);
+    }
 
     if (currentRound < totalRounds) {
       setCurrentRound((prev) => prev + 1);
@@ -304,7 +314,7 @@ function ConvergentTaskApp() {
         subjectId, // Use participantId from URL or fallback to sessionId
         "rat",
         transcript,
-        taskResponses,
+        taskData, // Use taskData with prompt+response pairs instead of flat taskResponses
         completeEngagementData, // Use enhanced engagement data
         startTime,
         currentEndTime, // Use local variable, not state

@@ -271,11 +271,17 @@ function DATTaskApp() {
     };
 
     try {
+      // Structure DAT data with prompt and responses for consistency
+      const taskData = {
+        prompt: "Generate 10 words that are as semantically different from each other as possible",
+        responses: words.filter(w => w.trim() !== '')
+      };
+      
       await logTaskCompletion(
         subjectId, // Use participantId from URL or fallback to sessionId
         "dat",
         transcript,
-        words.filter(w => w.trim() !== ""), // Pass the actual words as task responses
+        taskData, // Pass structured task data with prompt and responses
         engagementMetrics,
         startTime,
         currentEndTime,

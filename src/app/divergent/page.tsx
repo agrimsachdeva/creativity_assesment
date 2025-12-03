@@ -25,6 +25,7 @@ function DivergentTaskApp() {
   const [completed, setCompleted] = useState(false);
   const [transcript, setTranscript] = useState<Message[]>([]);
   const [taskResponses, setTaskResponses] = useState<string[]>([]);
+  const [taskData, setTaskData] = useState<Array<{ prompt: string; promptDetails: any; responses: string[] }>>([]);
   const [engagementMetrics, setEngagementMetrics] = useState({
     copyPasteCount: 0,
     chatbotUsagePercentage: 0,
@@ -176,6 +177,15 @@ function DivergentTaskApp() {
   };
 
   const handleNextRound = () => {
+    // Save current round's data (prompt + responses) before moving to next
+    if (currentItem) {
+      setTaskData(prev => [...prev, {
+        prompt: currentItem.name,
+        promptDetails: { id: currentItem.id, description: currentItem.description, category: currentItem.category },
+        responses: [...ideas]
+      }]);
+    }
+    
     if (currentRound < totalRounds) {
       setCurrentRound((prev) => prev + 1);
       initializeAUTRound();
@@ -307,7 +317,7 @@ function DivergentTaskApp() {
         subjectId, // Use participantId from URL or fallback to sessionId
         "aut",
         transcript,
-        taskResponses,
+        taskData, // Use taskData with prompt+responses pairs instead of flat taskResponses
         completeEngagementData, // Use enhanced engagement data
         startTime,
         currentEndTime, // Use local variable, not state
