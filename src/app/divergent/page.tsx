@@ -215,6 +215,26 @@ function DivergentTaskApp() {
     }
   };
 
+  const handleRestart = () => {
+    // Reset all state for a fresh start
+    setCurrentRound(1);
+    setCompleted(false);
+    setIdeas([]);
+    setTaskData([]);
+    setTaskResponses([]);
+    setTranscript([]);
+    usedItemIndicesRef.current = [];
+    setStartTime(new Date().toISOString());
+    initializeAUTRound();
+    setMessages([
+      {
+        role: "assistant",
+        content: "🎨 Welcome back! Ready for another round of creative thinking? Share your wildest ideas for unusual uses of everyday objects!",
+        timestamp: Date.now(),
+      },
+    ]);
+  };
+
   const handleTaskCompletion = async () => {
     // Use participantId from URL if available, otherwise fall back to sessionId
     const subjectId = participantId || sessionId;
@@ -394,7 +414,23 @@ function DivergentTaskApp() {
                 )}
               </>
             ) : (
-              <div className="mt-4 text-green-400 text-lg text-center">🎉 Congratulations! You've completed all rounds of the Alternate Uses Test. Thank you for your creativity!</div>
+              <div className="mt-4 text-center">
+                <div className="text-green-400 text-lg mb-4">
+                  🎉 Congratulations! You've completed all rounds of the Alternate Uses Test. Thank you for your creativity!
+                </div>
+                <div className="bg-white/5 rounded-xl p-4 mb-4 border border-white/10">
+                  <p className="text-white/70 text-sm mb-3">
+                    Want to try again for fun? You can restart the test below. 
+                    <span className="text-yellow-400 font-medium"> Note: This is optional and does not affect your compensation.</span>
+                  </p>
+                  <button
+                    onClick={handleRestart}
+                    className="px-6 py-2 bg-purple-500/80 hover:bg-purple-500 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+                  >
+                    🔄 Restart for Fun
+                  </button>
+                </div>
+              </div>
             )}
           </div>
           <div className="mt-8">

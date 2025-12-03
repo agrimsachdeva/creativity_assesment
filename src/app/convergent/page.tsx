@@ -210,6 +210,26 @@ function ConvergentTaskApp() {
     setFinalAnswer("");
   };
 
+  const handleRestart = () => {
+    // Reset all state for a fresh start
+    setCurrentRound(1);
+    setCompleted(false);
+    setFinalAnswer("");
+    setTaskData([]);
+    setTaskResponses([]);
+    setTranscript([]);
+    usedWordSetIndicesRef.current = [];
+    setStartTime(new Date().toISOString());
+    initializeRATRound();
+    setMessages([
+      {
+        role: "assistant",
+        content: "👋 Welcome back! Ready for another round of the Remote Associates Test? I'm here to help if you need hints!",
+        timestamp: Date.now(),
+      },
+    ]);
+  };
+
   const handleTaskCompletion = async () => {
     // Use participantId from URL if available, otherwise fall back to sessionId
     const subjectId = participantId || sessionId;
@@ -395,7 +415,23 @@ function ConvergentTaskApp() {
                 </button>
               </>
             ) : (
-              <div className="mt-4 text-green-400 text-lg text-center">🎉 Congratulations! You've completed all rounds of the Remote Associates Test. Thank you for your participation!</div>
+              <div className="mt-4 text-center">
+                <div className="text-green-400 text-lg mb-4">
+                  🎉 Congratulations! You've completed all rounds of the Remote Associates Test. Thank you for your participation!
+                </div>
+                <div className="bg-white/5 rounded-xl p-4 mb-4 border border-white/10">
+                  <p className="text-white/70 text-sm mb-3">
+                    Want to try again for fun? You can restart the test below. 
+                    <span className="text-yellow-400 font-medium"> Note: This is optional and does not affect your compensation.</span>
+                  </p>
+                  <button
+                    onClick={handleRestart}
+                    className="px-6 py-2 bg-blue-500/80 hover:bg-blue-500 text-white rounded-lg transition-all duration-200 text-sm font-medium"
+                  >
+                    🔄 Restart for Fun
+                  </button>
+                </div>
+              </div>
             )}
           </div>
           <div className="mt-8">
