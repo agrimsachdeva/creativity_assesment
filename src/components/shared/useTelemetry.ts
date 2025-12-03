@@ -262,9 +262,46 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
 
   // Get complete engagement data for database
   const getEngagementData = useCallback(() => {
+    // Create a human-readable summary of copy/paste behavior
+    const copyFromChat = copyPasteEvents.filter(e => e.type === 'copy' && e.source === 'chat').length;
+    const copyFromExternal = copyPasteEvents.filter(e => e.type === 'copy' && e.source === 'external').length;
+    const pasteToTask = copyPasteEvents.filter(e => e.type === 'paste' && e.source === 'task').length;
+    const pasteToChat = copyPasteEvents.filter(e => e.type === 'paste' && e.source === 'chat').length;
+    
+    // Detect if user copied from AI and pasted to task (direct AI usage)
+    let directAiCopyToTask = 0;
+    for (let i = 0; i < copyPasteEvents.length - 1; i++) {
+      const current = copyPasteEvents[i];
+      const next = copyPasteEvents[i + 1];
+      if (current.type === 'copy' && current.source === 'chat' && 
+          next.type === 'paste' && next.source === 'task' &&
+          Math.abs(current.textLength - next.textLength) <= 5) { // Allow small difference for line endings
+        directAiCopyToTask++;
+      }
+    }
+    
+    // Human-readable summary
+    const summary = {
+      totalCopyPasteActions: copyPasteEvents.length,
+      copiedFromAI: copyFromChat,
+      copiedFromExternal: copyFromExternal,
+      pastedIntoAnswer: pasteToTask,
+      pastedIntoChat: pasteToChat,
+      directAiCopyToAnswer: directAiCopyToTask,
+      aiInfluenceLevel: directAiCopyToTask > 0 ? 'high' : (copyFromChat > 0 ? 'medium' : (pasteToChat > 0 ? 'low' : 'none')),
+      interpretation: directAiCopyToTask > 0 
+        ? `User directly copied AI response ${directAiCopyToTask} time(s) into their answer`
+        : copyFromChat > 0 
+          ? `User copied from AI chat ${copyFromChat} time(s) but may have modified before using`
+          : pasteToChat > 0
+            ? `User pasted content into chat ${pasteToChat} time(s) to get AI help`
+            : 'No direct AI text usage detected'
+    };
+    
     return {
       ...engagementMetrics,
-      copyPasteEvents,
+      summary, // Human-readable summary
+      copyPasteEvents, // Raw events for detailed analysis
       aiUsageTracking,
       aiResponsesCount: aiResponses.length,
     };

@@ -34,11 +34,17 @@ function DATTaskApp() {
     sessionId,
     userId,
     isInitialized,
+    engagementMetrics: telemetryEngagement,
+    copyPasteEvents,
+    aiUsageTracking,
     startMessageComposition,
     updateMessageContent,
     completeMessage,
     recordAiResponse,
     recordResponseLatency,
+    recordAiResponseText,
+    calculateAiUsageInAnswer,
+    getEngagementData,
     generateTelemetry
   } = useTelemetry("divergent");
 
@@ -140,6 +146,8 @@ function DATTaskApp() {
         setMessages((prev) => [...prev, response]);
         // Add AI response to transcript
         setTranscript((prev) => [...prev, { role: "assistant", content: response.content, timestamp: Date.now() }]);
+        // Track AI response text for usage analysis
+        recordAiResponseText(response.content);
       } else {
         console.error("Invalid response format:", response);
       }
@@ -168,6 +176,9 @@ function DATTaskApp() {
     const currentEndTime = new Date().toISOString();
     setEndTime(currentEndTime);
 
+    // Get complete engagement data including copy/paste and AI usage
+    const completeEngagementData = getEngagementData();
+
     // Log required fields for debugging
     console.log("=== TASK COMPLETION DEBUG ===");
     console.log("subjectId (from URL or session):", subjectId);
@@ -175,7 +186,7 @@ function DATTaskApp() {
     console.log("sessionId (generated):", sessionId);
     console.log("transcript:", transcript);
     console.log("taskResponses:", taskResponses);
-    console.log("engagementMetrics:", engagementMetrics);
+    console.log("engagementMetrics:", completeEngagementData);
     console.log("startTime:", startTime);
     console.log("endTime:", currentEndTime);
 
@@ -282,7 +293,7 @@ function DATTaskApp() {
         "dat",
         transcript,
         taskData, // Pass structured task data with prompt and responses
-        engagementMetrics,
+        completeEngagementData, // Use enhanced engagement data with copy/paste and AI usage
         startTime,
         currentEndTime,
         defaultTelemetry,
