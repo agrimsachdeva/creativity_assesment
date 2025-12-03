@@ -60,7 +60,7 @@ export function AUTDisplay({
       </div>
 
       {/* Ideas Input Section */}
-      <div className="space-y-4">
+      <div className="space-y-4" data-task-input="true">
         <div className="flex items-center space-x-2">
           <input
             id="idea-input"
@@ -70,7 +70,7 @@ export function AUTDisplay({
             onChange={(e) => onNewIdeaChange(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={`Enter a creative use for the ${currentItem.name.toLowerCase()}...`}
-            className="flex-1 p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300"
+            className="task-input flex-1 p-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition-all duration-300"
           />
           <button
             onClick={handleAddIdea}

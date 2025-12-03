@@ -19,7 +19,7 @@ function DivergentTaskApp() {
   const [qualtricsId, setQualtricsId] = useState<string | null>(null);
   const [currentRound, setCurrentRound] = useState(1);
   const [currentItem, setCurrentItem] = useState<AUTItem | null>(null);
-  const [totalRounds, setTotalRounds] = useState(3); // Easily configurable total number of rounds
+  const [totalRounds, setTotalRounds] = useState(3); // Total number of rounds
   const [ideas, setIdeas] = useState<string[]>([]);
   const [newIdea, setNewIdea] = useState("");
   const [completed, setCompleted] = useState(false);
@@ -39,11 +39,17 @@ function DivergentTaskApp() {
     sessionId,
     userId,
     isInitialized,
+    engagementMetrics: telemetryEngagement,
+    copyPasteEvents,
+    aiUsageTracking,
     startMessageComposition,
     updateMessageContent,
     completeMessage,
     recordAiResponse,
     recordResponseLatency,
+    recordAiResponseText,
+    calculateAiUsageInAnswer,
+    getEngagementData,
     generateTelemetry
   } = useTelemetry("divergent");
 
@@ -77,6 +83,10 @@ function DivergentTaskApp() {
 
   const handleAddIdea = (idea: string) => {
     setIdeas(prev => [...prev, idea]);
+    // Track how much of this idea came from AI suggestions
+    calculateAiUsageInAnswer(idea);
+    // Update task responses for database
+    setTaskResponses(prev => [...prev, idea]);
   };
 
   const handleStartComposition = () => {
@@ -140,6 +150,8 @@ function DivergentTaskApp() {
       // Handle response
       if (response && response.role && response.content) {
         setMessages((prev) => [...prev, response]);
+        // Track AI response text for usage analysis
+        recordAiResponseText(response.content);
       } else {
         console.error("Invalid response format:", response);
       }
@@ -160,17 +172,28 @@ function DivergentTaskApp() {
   };
 
   const handleTaskCompletion = async () => {
-    setEndTime(new Date().toISOString());
+    // Guard: ensure telemetry is initialized
+    if (!isInitialized || !sessionId) {
+      console.error("=== TASK COMPLETION ABORTED: Telemetry not initialized ===");
+      console.error("isInitialized:", isInitialized, "sessionId:", sessionId);
+      return;
+    }
+    
+    const currentEndTime = new Date().toISOString(); // Use local variable instead of state
+    setEndTime(currentEndTime);
+
+    // Get complete engagement data including copy/paste and AI usage
+    const completeEngagementData = getEngagementData();
 
     // Log required fields for debugging
-    console.log("Logging task completion data:", {
-      subjectId: sessionId,
-      transcript,
-      taskResponses,
-      engagementMetrics,
-      startTime,
-      endTime,
-    });
+    console.log("=== TASK COMPLETION DEBUG ===");
+    console.log("subjectId (sessionId):", sessionId);
+    console.log("transcript:", transcript);
+    console.log("taskResponses:", taskResponses);
+    console.log("engagementMetrics:", completeEngagementData);
+    console.log("startTime:", startTime);
+    console.log("endTime:", currentEndTime);
+    console.log("qualtricsId:", qualtricsId);
 
     const defaultTelemetry = {
       sessionId: sessionId || "unknown",
@@ -244,7 +267,7 @@ function DivergentTaskApp() {
         finalMessageDifferentFromFirst: false,
       },
       interactionSequence: [],
-      sessionDuration: new Date(endTime).getTime() - new Date(startTime).getTime(),
+      sessionDuration: new Date(currentEndTime).getTime() - new Date(startTime).getTime(),
       totalMessages: transcript.length,
       avgMessageInterval: 0,
       taskCompletion: true,
@@ -268,15 +291,15 @@ function DivergentTaskApp() {
         "divergent",
         transcript,
         taskResponses,
-        engagementMetrics,
+        completeEngagementData, // Use enhanced engagement data
         startTime,
-        endTime,
+        currentEndTime, // Use local variable, not state
         defaultTelemetry,
         qualtricsId
       );
-      console.log("Task completion data logged successfully.");
+      console.log("=== TASK COMPLETION SUCCESS ===");
     } catch (error) {
-      console.error("Error logging task completion data:", error);
+      console.error("=== TASK COMPLETION ERROR ===", error);
     }
   };
 

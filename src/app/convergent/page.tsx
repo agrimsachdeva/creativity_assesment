@@ -38,11 +38,17 @@ function ConvergentTaskApp() {
     sessionId,
     userId,
     isInitialized,
+    engagementMetrics: telemetryEngagement,
+    copyPasteEvents,
+    aiUsageTracking,
     startMessageComposition,
     updateMessageContent,
     completeMessage,
     recordAiResponse,
     recordResponseLatency,
+    recordAiResponseText,
+    calculateAiUsageInAnswer,
+    getEngagementData,
     generateTelemetry
   } = useTelemetry("convergent");
 
@@ -132,6 +138,8 @@ function ConvergentTaskApp() {
       // Handle response
       if (response && response.role && response.content) {
         setMessages((prev) => [...prev, response]);
+        // Track AI response text for usage analysis
+        recordAiResponseText(response.content);
       } else {
         console.error("Invalid response format:", response);
       }
@@ -145,6 +153,11 @@ function ConvergentTaskApp() {
   const handleSubmitAnswer = () => {
     if (finalAnswer.trim() === "") return;
 
+    // Track AI usage in the submitted answer
+    calculateAiUsageInAnswer(finalAnswer);
+    // Store the answer
+    setTaskResponses(prev => [...prev, finalAnswer]);
+
     if (currentRound < totalRounds) {
       setCurrentRound((prev) => prev + 1);
       initializeRATRound();
@@ -156,17 +169,21 @@ function ConvergentTaskApp() {
   };
 
   const handleTaskCompletion = async () => {
-    setEndTime(new Date().toISOString());
+    const currentEndTime = new Date().toISOString(); // Use local variable instead of state
+    setEndTime(currentEndTime);
+
+    // Get complete engagement data including copy/paste and AI usage
+    const completeEngagementData = getEngagementData();
 
     // Log required fields for debugging
-    console.log("Logging task completion data:", {
-      subjectId: sessionId,
-      transcript,
-      taskResponses,
-      engagementMetrics,
-      startTime,
-      endTime,
-    });
+    console.log("=== TASK COMPLETION DEBUG ===");
+    console.log("subjectId (sessionId):", sessionId);
+    console.log("transcript:", transcript);
+    console.log("taskResponses:", taskResponses);
+    console.log("engagementMetrics:", completeEngagementData);
+    console.log("startTime:", startTime);
+    console.log("endTime:", currentEndTime);
+    console.log("qualtricsId:", qualtricsId);
 
     const defaultTelemetry = {
       sessionId: sessionId || "unknown",
@@ -240,7 +257,7 @@ function ConvergentTaskApp() {
         finalMessageDifferentFromFirst: false,
       },
       interactionSequence: [],
-      sessionDuration: new Date(endTime).getTime() - new Date(startTime).getTime(),
+      sessionDuration: new Date(currentEndTime).getTime() - new Date(startTime).getTime(),
       totalMessages: transcript.length,
       avgMessageInterval: 0,
       taskCompletion: true,
@@ -264,13 +281,13 @@ function ConvergentTaskApp() {
         "convergent",
         transcript,
         taskResponses,
-        engagementMetrics,
+        completeEngagementData, // Use enhanced engagement data
         startTime,
-        endTime,
+        currentEndTime, // Use local variable, not state
         defaultTelemetry,
         qualtricsId
       );
-      console.log("Task completion data logged successfully.");
+      console.log("=== TASK COMPLETION SUCCESS ===");
     } catch (error) {
       console.error("Error logging task completion data:", error);
     }
@@ -297,7 +314,7 @@ function ConvergentTaskApp() {
               totalRounds={totalRounds}
             />
           )}
-          <div className="mt-4">
+          <div className="mt-4" data-task-input="true">
             {!completed ? (
               <>
                 <label htmlFor="finalAnswer" className="block text-white text-base mb-2">
@@ -314,7 +331,7 @@ function ConvergentTaskApp() {
                       handleSubmitAnswer();
                     }
                   }}
-                  className="w-full p-2 border border-gray-300 rounded-md text-base mb-2 bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                  className="task-input w-full p-2 border border-gray-300 rounded-md text-base mb-2 bg-white/80 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                   placeholder="Type your answer here..."
                 />
                 <button

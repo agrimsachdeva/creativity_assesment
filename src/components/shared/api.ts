@@ -38,6 +38,9 @@ export async function logTaskCompletion(
   telemetry?: Telemetry,
   qualtricsId?: string | null
 ): Promise<void> {
+  console.log("=== API: Sending to /api/chat ===");
+  console.log("Payload:", { subjectId, taskType, transcript, taskResponses, engagementMetrics, startTime, endTime, qualtricsId });
+  
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -54,9 +57,12 @@ export async function logTaskCompletion(
     }),
   });
   
+  const responseData = await res.json().catch(() => ({ error: "Failed to parse response" }));
+  console.log("=== API: Response ===", responseData);
+  
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({ error: "Unknown error" }));
-    throw new Error(errorData.error || `HTTP error! status: ${res.status}`);
+    console.error("=== API: Error ===", responseData);
+    throw new Error(responseData.error || `HTTP error! status: ${res.status}`);
   }
 }
 

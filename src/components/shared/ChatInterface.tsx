@@ -82,7 +82,7 @@ export function ChatInterface({
   }, [messages, loading]);
 
   return (
-    <div className="backdrop-blur-lg bg-white/10 rounded-xl border border-white/20 shadow-lg flex flex-col" style={{height: '600px'}}>
+    <div className="backdrop-blur-lg bg-white/10 rounded-xl border border-white/20 shadow-lg flex flex-col" data-chat-interface="true" style={{height: '600px'}}>
       {/* Chat Messages Area */}
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar" style={{minHeight: '400px'}}>
         {messages.length === 0 ? (
@@ -102,7 +102,7 @@ export function ChatInterface({
           <div className="space-y-3">
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-fade-in`}>
-                <div className={`max-w-sm lg:max-w-md relative group ${msg.role === "user" ? "order-2" : "order-1"}`}> 
+                <div className={`max-w-sm lg:max-w-md relative group chat-message ${msg.role === "user" ? "order-2" : "order-1"}`} data-message-role={msg.role}> 
                   {/* Message Bubble */}
                   <div className={`px-4 py-2 rounded-xl border transition-all duration-300 group-hover:shadow-lg ${msg.role === "user" ? "bg-purple-600 text-white border-purple-400 ml-5" : "bg-cyan-600 text-white border-cyan-400 mr-5"}`}>
                     <div className={`text-xs font-semibold mb-1 ${msg.role === "user" ? "text-purple-200" : "text-cyan-100"}`}>{msg.role === "user" ? "You" : "AI Assistant"}</div>

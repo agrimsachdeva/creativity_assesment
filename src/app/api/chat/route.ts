@@ -75,18 +75,32 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Missing required fields: ${missingFields.join(", ")}` }, { status: 400 });
       }
 
+      console.log("=== ATTEMPTING DATABASE INSERT ===");
+      console.log("subjectId:", subjectId);
+      console.log("taskType:", taskType);
+      console.log("transcript length:", Array.isArray(transcript) ? transcript.length : 'not array');
+      console.log("taskResponses:", taskResponses);
+      console.log("engagementMetrics:", JSON.stringify(engagementMetrics, null, 2));
+      console.log("startTime:", startTime);
+      console.log("endTime:", endTime);
+      console.log("qualtricsId:", qualtricsId);
+
       try {
-        await sql`
+        const result = await sql`
           INSERT INTO interactions (
             subject_id, task_type, transcript, task_responses, engagement_metrics, start_time, end_time, qualtrics_id
           ) VALUES (
             ${subjectId}, ${taskType}, ${JSON.stringify(transcript)}, ${JSON.stringify(taskResponses)}, ${JSON.stringify(engagementMetrics)}, ${startTime}, ${endTime}, ${qualtricsId}
           )
+          RETURNING id
         `;
 
-        console.log("Task completion logged successfully");
+        console.log("=== DATABASE INSERT SUCCESS ===");
+        console.log("Inserted row ID:", result.rows[0]?.id);
+        
         return NextResponse.json({ 
           success: true,
+          insertedId: result.rows[0]?.id,
           response: {
             role: "assistant",
             content: "Task completed successfully. Thank you for your participation!",
@@ -94,14 +108,25 @@ export async function POST(req: NextRequest) {
           }
         });
       } catch (dbError) {
-        console.error("Database error:", dbError);
-        return NextResponse.json({ error: "Failed to save interaction data" }, { status: 500 });
+        console.error("=== DATABASE ERROR ===");
+        console.error("Error name:", (dbError as Error).name);
+        console.error("Error message:", (dbError as Error).message);
+        console.error("Full error:", dbError);
+        return NextResponse.json({ error: "Failed to save interaction data", details: (dbError as Error).message }, { status: 500 });
       }
     } 
     
     // Invalid request
     else {
-      console.log("Invalid request format - missing required data");
+      console.log("=== INVALID REQUEST FORMAT ===");
+      console.log("subjectId:", subjectId, "truthy:", !!subjectId);
+      console.log("taskType:", taskType, "truthy:", !!taskType);
+      console.log("transcript:", transcript, "truthy:", !!transcript);
+      console.log("taskResponses:", taskResponses, "truthy:", !!taskResponses);
+      console.log("engagementMetrics:", engagementMetrics, "truthy:", !!engagementMetrics);
+      console.log("startTime:", startTime, "truthy:", !!startTime);
+      console.log("endTime:", endTime, "truthy:", !!endTime);
+      console.log("messages:", messages, "truthy:", !!messages);
       return NextResponse.json({ error: "Invalid request format" }, { status: 400 });
     }
 
