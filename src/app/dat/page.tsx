@@ -45,7 +45,12 @@ function DATTaskApp() {
     recordAiResponseText,
     calculateAiUsageInAnswer,
     getEngagementData,
-    generateTelemetry
+    generateTelemetry,
+    // Help-seeking behavior tracking
+    recordAIQuery,
+    recordAnswerSubmission,
+    recordRoundComplete,
+    resetHelpSeekingMetrics,
   } = useTelemetry("divergent");
 
   useEffect(() => {
@@ -103,6 +108,9 @@ function DATTaskApp() {
     setMessages((prev) => [...prev, userMessage]);
     setInput(""); // Clear input immediately after sending
 
+    // Track AI query for help-seeking behavior
+    recordAIQuery();
+
     // Generate telemetry
     const telemetry = generateTelemetry(
       1, // DAT is a single round task
@@ -159,6 +167,13 @@ function DATTaskApp() {
   };
 
   const handleComplete = () => {
+    // Track help-seeking: was this task AI-assisted?
+    const wasAIAssisted = engagementMetrics.chatbotEngagementCount > 0;
+    recordAnswerSubmission(wasAIAssisted);
+    
+    // Track round completion (DAT is single round)
+    recordRoundComplete();
+    
     setCompleted(true);
   };
 
@@ -169,6 +184,8 @@ function DATTaskApp() {
     setTaskResponses([]);
     setTranscript([]);
     setStartTime(new Date().toISOString());
+    // Reset help-seeking metrics
+    resetHelpSeekingMetrics();
     setMessages([
       {
         role: "assistant",

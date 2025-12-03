@@ -20,6 +20,18 @@ export interface AIUsageTracking {
   matchedSegments: { aiText: string; userText: string; similarity: number }[];
 }
 
+// Help-seeking behavior tracking
+export interface HelpSeekingMetrics {
+  helpSeekingLatency: number | null;      // ms - How quickly do they turn to AI when stuck?
+  independentSolveAttempts: number;       // Answers submitted without any AI interaction
+  aiAsFirstResort: boolean;               // Did they ask AI before trying themselves?
+  aiAsLastResort: boolean;                // Did they only ask AI after multiple failed attempts?
+  totalAIQueries: number;                 // Total number of times user asked AI
+  attemptsBeforeFirstAIQuery: number;     // How many attempts before first AI help
+  timeBeforeFirstAIQuery: number | null;  // ms - Time spent before asking AI
+  aiQueriesPerRound: number[];            // AI queries broken down by round
+}
+
 export function useTelemetry(taskType: "divergent" | "convergent") {
   const collectorRef = useRef<TelemetryCollector | null>(null);
   const sessionIdRef = useRef<string>('');
@@ -40,6 +52,16 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
     chatbotUsagePercentage: 0,
     chatbotEngagementCount: 0,
   });
+
+  // Help-seeking behavior tracking
+  const taskStartTimeRef = useRef<number>(Date.now());
+  const firstAIQueryTimeRef = useRef<number | null>(null);
+  const [hasAskedAI, setHasAskedAI] = useState(false);
+  const [attemptsBeforeAI, setAttemptsBeforeAI] = useState(0);
+  const [independentSolveAttempts, setIndependentSolveAttempts] = useState(0);
+  const [totalAIQueries, setTotalAIQueries] = useState(0);
+  const [currentRoundAIQueries, setCurrentRoundAIQueries] = useState(0);
+  const [aiQueriesPerRound, setAiQueriesPerRound] = useState<number[]>([]);
 
   useEffect(() => {
     // Generate IDs only on the client to avoid hydration mismatch
@@ -242,6 +264,82 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
     });
   }, [aiResponses]);
 
+  // === HELP-SEEKING BEHAVIOR TRACKING ===
+  
+  // Record when user sends a message to AI (asks for help)
+  const recordAIQuery = useCallback(() => {
+    const now = Date.now();
+    
+    // Track first AI query time
+    if (!hasAskedAI) {
+      setHasAskedAI(true);
+      firstAIQueryTimeRef.current = now;
+      console.log('[Telemetry] First AI query at:', now - taskStartTimeRef.current, 'ms after task start');
+    }
+    
+    setTotalAIQueries(prev => prev + 1);
+    setCurrentRoundAIQueries(prev => prev + 1);
+    
+    console.log('[Telemetry] AI query recorded. Total:', totalAIQueries + 1);
+  }, [hasAskedAI, totalAIQueries]);
+
+  // Record when user submits an answer (to track independent vs AI-assisted)
+  const recordAnswerSubmission = useCallback((wasAIAssistedThisRound: boolean) => {
+    if (!wasAIAssistedThisRound && !hasAskedAI) {
+      // User submitted without asking AI at all
+      setIndependentSolveAttempts(prev => prev + 1);
+      console.log('[Telemetry] Independent solve recorded');
+    }
+    
+    // If they haven't asked AI yet, this counts as an attempt before AI
+    if (!hasAskedAI) {
+      setAttemptsBeforeAI(prev => prev + 1);
+    }
+  }, [hasAskedAI]);
+
+  // Record when a round is complete (for per-round AI query tracking)
+  const recordRoundComplete = useCallback(() => {
+    setAiQueriesPerRound(prev => [...prev, currentRoundAIQueries]);
+    setCurrentRoundAIQueries(0);
+    // Reset hasAskedAI for the new round to track per-round behavior
+    setHasAskedAI(false);
+    console.log('[Telemetry] Round complete. AI queries this round:', currentRoundAIQueries);
+  }, [currentRoundAIQueries]);
+
+  // Reset help-seeking metrics (for restart)
+  const resetHelpSeekingMetrics = useCallback(() => {
+    taskStartTimeRef.current = Date.now();
+    firstAIQueryTimeRef.current = null;
+    setHasAskedAI(false);
+    setAttemptsBeforeAI(0);
+    setIndependentSolveAttempts(0);
+    setTotalAIQueries(0);
+    setCurrentRoundAIQueries(0);
+    setAiQueriesPerRound([]);
+    console.log('[Telemetry] Help-seeking metrics reset');
+  }, []);
+
+  // Get help-seeking metrics summary
+  const getHelpSeekingMetrics = useCallback((): HelpSeekingMetrics => {
+    const helpSeekingLatency = firstAIQueryTimeRef.current 
+      ? firstAIQueryTimeRef.current - taskStartTimeRef.current 
+      : null;
+    
+    const allRoundQueries = [...aiQueriesPerRound, currentRoundAIQueries];
+    const totalQueries = totalAIQueries;
+    
+    return {
+      helpSeekingLatency,
+      independentSolveAttempts,
+      aiAsFirstResort: attemptsBeforeAI === 0 && totalQueries > 0,
+      aiAsLastResort: attemptsBeforeAI >= 2 && totalQueries > 0,
+      totalAIQueries: totalQueries,
+      attemptsBeforeFirstAIQuery: attemptsBeforeAI,
+      timeBeforeFirstAIQuery: helpSeekingLatency,
+      aiQueriesPerRound: allRoundQueries,
+    };
+  }, [aiQueriesPerRound, currentRoundAIQueries, totalAIQueries, independentSolveAttempts, attemptsBeforeAI]);
+
   const generateTelemetry = useCallback((
     currentRound?: number | null,
     currentWordSet?: { words: string[]; answer: string } | null,
@@ -298,14 +396,18 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
             : 'No direct AI text usage detected'
     };
     
+    // Get help-seeking metrics
+    const helpSeeking = getHelpSeekingMetrics();
+    
     return {
       ...engagementMetrics,
       summary, // Human-readable summary
       copyPasteEvents, // Raw events for detailed analysis
       aiUsageTracking,
       aiResponsesCount: aiResponses.length,
+      helpSeeking, // Help-seeking behavior metrics
     };
-  }, [engagementMetrics, copyPasteEvents, aiUsageTracking, aiResponses]);
+  }, [engagementMetrics, copyPasteEvents, aiUsageTracking, aiResponses, getHelpSeekingMetrics]);
 
   return {
     sessionId: isInitialized ? sessionIdRef.current : '',
@@ -324,6 +426,12 @@ export function useTelemetry(taskType: "divergent" | "convergent") {
     recordAiResponseText,
     calculateAiUsageInAnswer,
     getEngagementData,
-    generateTelemetry
+    generateTelemetry,
+    // Help-seeking behavior tracking
+    recordAIQuery,
+    recordAnswerSubmission,
+    recordRoundComplete,
+    resetHelpSeekingMetrics,
+    getHelpSeekingMetrics,
   };
 }

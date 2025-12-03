@@ -51,7 +51,12 @@ function ConvergentTaskApp() {
     recordAiResponseText,
     calculateAiUsageInAnswer,
     getEngagementData,
-    generateTelemetry
+    generateTelemetry,
+    // Help-seeking behavior tracking
+    recordAIQuery,
+    recordAnswerSubmission,
+    recordRoundComplete,
+    resetHelpSeekingMetrics,
   } = useTelemetry("convergent");
 
   useEffect(() => {
@@ -131,6 +136,9 @@ function ConvergentTaskApp() {
     setMessages((prev) => [...prev, userMessage]);
     setInput(""); // Clear input immediately after sending
 
+    // Track AI query for help-seeking behavior
+    recordAIQuery();
+
     // Generate telemetry
     const telemetry = generateTelemetry(
       currentRound,
@@ -186,6 +194,10 @@ function ConvergentTaskApp() {
   const handleSubmitAnswer = () => {
     if (finalAnswer.trim() === "") return;
 
+    // Track help-seeking: was this round AI-assisted?
+    const wasAIAssistedThisRound = engagementMetrics.chatbotEngagementCount > 0;
+    recordAnswerSubmission(wasAIAssistedThisRound);
+
     // Track AI usage in the submitted answer
     calculateAiUsageInAnswer(finalAnswer);
     // Store the answer
@@ -199,6 +211,9 @@ function ConvergentTaskApp() {
         userAnswer: finalAnswer.trim()
       }]);
     }
+
+    // Track round completion for help-seeking metrics
+    recordRoundComplete();
 
     if (currentRound < totalRounds) {
       setCurrentRound((prev) => prev + 1);
@@ -220,6 +235,8 @@ function ConvergentTaskApp() {
     setTranscript([]);
     usedWordSetIndicesRef.current = [];
     setStartTime(new Date().toISOString());
+    // Reset help-seeking metrics
+    resetHelpSeekingMetrics();
     initializeRATRound();
     setMessages([
       {

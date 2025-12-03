@@ -52,7 +52,12 @@ function DivergentTaskApp() {
     recordAiResponseText,
     calculateAiUsageInAnswer,
     getEngagementData,
-    generateTelemetry
+    generateTelemetry,
+    // Help-seeking behavior tracking
+    recordAIQuery,
+    recordAnswerSubmission,
+    recordRoundComplete,
+    resetHelpSeekingMetrics,
   } = useTelemetry("divergent");
 
   useEffect(() => {
@@ -142,6 +147,9 @@ function DivergentTaskApp() {
     setMessages((prev) => [...prev, userMessage]);
     setInput(""); // Clear input immediately after sending
 
+    // Track AI query for help-seeking behavior
+    recordAIQuery();
+
     // Generate telemetry
     const telemetry = generateTelemetry(
       currentRound,
@@ -207,6 +215,13 @@ function DivergentTaskApp() {
       }]);
     }
     
+    // Track help-seeking: was this round AI-assisted?
+    const wasAIAssistedThisRound = engagementMetrics.chatbotEngagementCount > 0;
+    recordAnswerSubmission(wasAIAssistedThisRound);
+    
+    // Track round completion for help-seeking metrics
+    recordRoundComplete();
+    
     if (currentRound < totalRounds) {
       setCurrentRound((prev) => prev + 1);
       initializeAUTRound();
@@ -225,6 +240,8 @@ function DivergentTaskApp() {
     setTranscript([]);
     usedItemIndicesRef.current = [];
     setStartTime(new Date().toISOString());
+    // Reset help-seeking metrics
+    resetHelpSeekingMetrics();
     initializeAUTRound();
     setMessages([
       {
