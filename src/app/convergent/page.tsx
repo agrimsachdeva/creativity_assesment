@@ -300,7 +300,7 @@ function ConvergentTaskApp() {
     try {
       await logTaskCompletion(
         subjectId, // Use participantId from URL or fallback to sessionId
-        "convergent",
+        "rat",
         transcript,
         taskResponses,
         completeEngagementData, // Use enhanced engagement data

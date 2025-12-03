@@ -271,7 +271,7 @@ function DATTaskApp() {
     try {
       await logTaskCompletion(
         subjectId, // Use participantId from URL or fallback to sessionId
-        "divergent",
+        "dat",
         transcript,
         words.filter(w => w.trim() !== ""), // Pass the actual words as task responses
         engagementMetrics,

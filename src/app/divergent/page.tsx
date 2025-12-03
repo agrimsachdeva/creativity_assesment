@@ -303,7 +303,7 @@ function DivergentTaskApp() {
     try {
       await logTaskCompletion(
         subjectId, // Use participantId from URL or fallback to sessionId
-        "divergent",
+        "aut",
         transcript,
         taskResponses,
         completeEngagementData, // Use enhanced engagement data

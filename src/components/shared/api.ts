@@ -29,7 +29,7 @@ export async function sendChatMessage(
 // Function for task completion logging
 export async function logTaskCompletion(
   subjectId: string,
-  taskType: "divergent" | "convergent",
+  taskType: "aut" | "rat" | "dat",
   transcript: any,
   taskResponses: any,
   engagementMetrics: any,
